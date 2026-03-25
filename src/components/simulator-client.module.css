@@ -1,0 +1,119 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+  padding: 2rem clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.hero,
+.createCard,
+.gameCard,
+.empty {
+  border: 4px solid #13182d;
+  box-shadow: 8px 8px 0 rgba(19, 24, 45, 0.18);
+}
+
+.hero,
+.createCard,
+.gameCard,
+.empty {
+  padding: 1.25rem;
+  background: rgba(255, 248, 233, 0.95);
+}
+
+.eyebrow,
+.status {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #954300;
+}
+
+.hero h1,
+.createCard h2,
+.gameCard h2 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  color: #13182d;
+}
+
+.hero {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.hero p {
+  line-height: 1.6;
+  color: #263150;
+  max-width: 70ch;
+}
+
+.grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+}
+
+.createCard,
+.list,
+.joinInline,
+.playerLinks,
+.cardActions {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.createCard label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.createCard input,
+.createCard button,
+.joinInline input,
+.joinInline button {
+  min-height: 3rem;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+  border: 3px solid #13182d;
+}
+
+.createCard button,
+.joinInline button {
+  font-family: var(--font-display);
+  background: #ff5d3d;
+  color: #fff7e6;
+}
+
+.dateRow {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cardActions,
+.playerLinks {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.cardActions a,
+.playerLinks a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.65rem 0.85rem;
+  border: 2px solid #13182d;
+  background: rgba(243, 236, 220, 0.92);
+}
+
+.error {
+  color: #a91919;
+}
+
+@media (max-width: 950px) {
+  .grid,
+  .dateRow {
+    grid-template-columns: 1fr;
+  }
+}

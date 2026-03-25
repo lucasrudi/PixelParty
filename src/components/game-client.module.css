@@ -1,0 +1,256 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.25rem clamp(1rem, 3vw, 2rem) 2rem;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 22rem;
+  border: 4px solid #13182d;
+  box-shadow: 10px 10px 0 rgba(19, 24, 45, 0.28);
+}
+
+.heroImageWrap {
+  position: absolute;
+  inset: 0;
+}
+
+.heroImage {
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.heroShade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(125deg, rgba(9, 11, 23, 0.2), rgba(9, 11, 23, 0.84)),
+    linear-gradient(0deg, rgba(255, 145, 91, 0.18), transparent);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: end;
+  gap: 1rem;
+  min-height: 22rem;
+  padding: 1.5rem;
+  color: #fff7e6;
+}
+
+.heroTopline,
+.heroMeta,
+.panelHeader,
+.questHero,
+.validationButtons,
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.heroTopline span,
+.heroMeta span,
+.copyState,
+.panelHeader span,
+.questStatus {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(255, 247, 230, 0.16);
+  border: 1px solid rgba(255, 247, 230, 0.3);
+}
+
+.heroContent h1,
+.panel h2,
+.finale h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  line-height: 1.1;
+}
+
+.heroContent p {
+  max-width: 60ch;
+  line-height: 1.6;
+}
+
+.heroActions button,
+.heroActions a,
+.buttonColumn button,
+.buttonColumn a,
+.form button,
+.validationButtons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.75rem 1rem;
+  font: inherit;
+  font-family: var(--font-display);
+  border: 3px solid #13182d;
+  background: #ff5d3d;
+  color: #fff7e6;
+}
+
+.ghostButton {
+  background: #f7ecda !important;
+  color: #13182d !important;
+}
+
+.layout {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.5fr) minmax(260px, 0.9fr);
+  align-items: start;
+}
+
+.leftRail,
+.centerRail,
+.rightRail {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.panel,
+.finale,
+.errorPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  background: rgba(255, 249, 236, 0.95);
+  border: 4px solid #13182d;
+  box-shadow: 8px 8px 0 rgba(19, 24, 45, 0.18);
+}
+
+.mapTimeline,
+.roster,
+.buttonColumn,
+.form,
+.feed,
+.historyList,
+.validationList,
+.finaleCards {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.stop,
+.playerCard,
+.feedItem,
+.historyCard,
+.validationCard,
+.finaleCard,
+.podiumCard,
+.evidenceCard {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  background: rgba(244, 238, 225, 0.92);
+  border: 2px solid rgba(19, 24, 45, 0.24);
+}
+
+.stop {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.stopIndex {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  font-family: var(--font-display);
+  background: #13182d;
+  color: #fff7e6;
+}
+
+.stopActive {
+  background: rgba(255, 196, 98, 0.45);
+}
+
+.playerCard,
+.finaleCard {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.portrait {
+  border: 2px solid #13182d;
+  image-rendering: pixelated;
+}
+
+.playerMeta {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.playerMeta span,
+.feedItem span,
+.historyCard span {
+  color: #4a5679;
+}
+
+.form label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.form textarea,
+.form input,
+.form select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+  color: #13182d;
+  background: rgba(255, 255, 255, 0.72);
+  border: 2px solid rgba(19, 24, 45, 0.24);
+}
+
+.questHero strong {
+  font-size: 1.15rem;
+  color: #13182d;
+}
+
+.evidencePrompt,
+.emptyState {
+  color: #4a5679;
+  line-height: 1.5;
+}
+
+.media {
+  width: 100%;
+  height: auto;
+  border: 2px solid #13182d;
+  object-fit: cover;
+}
+
+.validationButtons {
+  justify-content: flex-start;
+}
+
+.podium {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.podiumCard {
+  justify-items: start;
+  background: linear-gradient(180deg, rgba(255, 209, 102, 0.72), rgba(255, 247, 230, 0.96));
+}
+
+.errorPanel {
+  background: rgba(255, 226, 214, 0.96);
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

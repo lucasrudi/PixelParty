@@ -1,0 +1,63 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.card {
+  display: grid;
+  gap: 1rem;
+  width: min(34rem, 100%);
+  padding: 2rem;
+  background: rgba(255, 244, 217, 0.94);
+  border: 4px solid #13182d;
+  box-shadow: 10px 10px 0 rgba(19, 24, 45, 0.32);
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #954300;
+}
+
+.card h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  color: #13182d;
+}
+
+.meta,
+.summary {
+  line-height: 1.6;
+  color: #263150;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.form input,
+.form button {
+  min-height: 3rem;
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+  border: 3px solid #13182d;
+}
+
+.form button {
+  font-family: var(--font-display);
+  background: #ff5d3d;
+  color: #fff8ec;
+}
+
+.error {
+  color: #a91919;
+}

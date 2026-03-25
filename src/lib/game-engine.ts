@@ -212,10 +212,16 @@ function createDayStartMessages(game: Game) {
 
 function chooseValidators(game: Game, playerId: string) {
   const candidates = game.players.filter((player) => player.id !== playerId);
-  const offset = game.currentDay % Math.max(candidates.length, 1);
-  return [...candidates, ...candidates]
-    .slice(offset, offset + Math.min(2, candidates.length))
-    .map((player) => player.id);
+
+  if (game.accessMode === "simulator") {
+    const host = candidates.find((player) => player.id === game.hostPlayerId);
+    const everyoneElse = candidates.filter((player) => player.id !== game.hostPlayerId);
+    return [host, ...everyoneElse]
+      .filter((player): player is Player => Boolean(player))
+      .map((player) => player.id);
+  }
+
+  return candidates.map((player) => player.id);
 }
 
 export function createGame(input: CreateGameInput): Game {
@@ -505,8 +511,12 @@ export function validateQuest(
     throw new Error("Quest not found.");
   }
 
-  if (!quest.validators.includes(validatorId)) {
-    throw new Error("This player was not assigned to validate that quest.");
+  if (quest.status !== "pending_validation") {
+    throw new Error("That quest is no longer waiting for validation.");
+  }
+
+  if (quest.playerId === validatorId) {
+    throw new Error("You cannot validate your own quest.");
   }
 
   if (
@@ -530,13 +540,12 @@ export function validateQuest(
     addMessages(game, [
       createMessage(
         "Quest rejected",
-        `${validator?.name} rejected ${questOwner?.name}'s proof for "${quest.title}". A fresh attempt is required.`,
-        "player",
+        `${validator?.name} rejected ${questOwner?.name}'s proof for "${quest.title}". No points were awarded and the crew saw the ruling.`,
+        "all",
         game.accessMode === "telegram" ? "telegram-ready" : "simulator",
-        quest.playerId,
       ),
     ]);
-  } else if (quest.validationVotes.length >= quest.validators.length) {
+  } else {
     quest.status = "completed";
     quest.awardedAt = now();
 
@@ -547,7 +556,7 @@ export function validateQuest(
     addMessages(game, [
       createMessage(
         "Quest completed",
-        `${questOwner?.name} banked ${quest.points} points for "${quest.title}". The crowd goes feral.`,
+        `${validator?.name} approved ${questOwner?.name}'s proof for "${quest.title}". ${questOwner?.name} banked ${quest.points} points.`,
         "all",
         game.accessMode === "telegram" ? "telegram-ready" : "simulator",
       ),

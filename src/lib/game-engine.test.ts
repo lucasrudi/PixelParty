@@ -1,0 +1,82 @@
+import { describe, expect, it } from "vitest";
+import { validateQuest } from "@/lib/game-engine";
+import {
+  buildStartedSimulatorGame,
+  buildStartedTelegramGame,
+  submitPendingEvidence,
+} from "@/test/fixtures";
+
+describe("game validation flow", () => {
+  it("always includes the simulator host in the validator pool", () => {
+    const { game, host, mauri } = buildStartedSimulatorGame();
+    const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");
+
+    expect(quest.validators).toContain(host.id);
+  });
+
+  it("awards points and posts a narrator broadcast when evidence is accepted", () => {
+    const { game, mauri, seba } = buildStartedSimulatorGame();
+    const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");
+
+    const updatedGame = validateQuest(game, seba.id, quest.id, {
+      decision: "approved",
+      note: "Looks good",
+    });
+
+    const updatedQuest = updatedGame.quests.find((entry) => entry.id === quest.id);
+    const approvalMessage = updatedGame.messages.at(-1);
+
+    expect(updatedQuest?.status).toBe("completed");
+    expect(updatedGame.players.find((player) => player.id === mauri.id)?.points).toBe(
+      quest.points,
+    );
+    expect(approvalMessage?.audience).toBe("all");
+    expect(approvalMessage?.body).toContain("approved");
+  });
+
+  it("does not award points and broadcasts the result when evidence is rejected", () => {
+    const { game, mauri, seba } = buildStartedSimulatorGame();
+    const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");
+
+    const updatedGame = validateQuest(game, seba.id, quest.id, {
+      decision: "rejected",
+      note: "Nope",
+    });
+
+    const updatedQuest = updatedGame.quests.find((entry) => entry.id === quest.id);
+    const rejectionMessage = updatedGame.messages.at(-1);
+
+    expect(updatedQuest?.status).toBe("rejected");
+    expect(updatedGame.players.find((player) => player.id === mauri.id)?.points).toBe(0);
+    expect(rejectionMessage?.audience).toBe("all");
+    expect(rejectionMessage?.body).toContain("No points were awarded");
+  });
+
+  it("lets any other player validate a pending production proof", () => {
+    const { game, mauri, seba } = buildStartedTelegramGame();
+    const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");
+
+    quest.validators = [];
+
+    const updatedGame = validateQuest(game, seba.id, quest.id, {
+      decision: "approved",
+      note: "Approved from the inbox",
+    });
+
+    expect(updatedGame.quests.find((entry) => entry.id === quest.id)?.status).toBe(
+      "completed",
+    );
+  });
+
+  it("blocks players from validating their own evidence", () => {
+    const { game, mauri } = buildStartedSimulatorGame();
+    const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");
+
+    expect(() =>
+      validateQuest(game, mauri.id, quest.id, {
+        decision: "approved",
+        note: "Self-approved",
+      }),
+    ).toThrow("cannot validate your own quest");
+  });
+});

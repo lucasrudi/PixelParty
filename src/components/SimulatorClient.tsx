@@ -6,10 +6,43 @@ import { useState, useTransition } from "react";
 import { Game } from "@/lib/types";
 import styles from "./simulator-client.module.css";
 
+const SIMULATOR_NAMES = [
+  "Mauri",
+  "Seba",
+  "Flor",
+  "Luqui",
+  "Javi",
+  "Fer",
+  "Nacho",
+  "Santi",
+  "Coco",
+  "Pepo",
+  "Toto",
+  "Bauti",
+];
+
 function offsetDate(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function nextSimulatorPlayerName(existingNames: string[]) {
+  const usedNames = new Set(existingNames.map((name) => name.toLowerCase()));
+  const availableNames = SIMULATOR_NAMES.filter(
+    (name) => !usedNames.has(name.toLowerCase()),
+  );
+
+  if (availableNames.length > 0) {
+    return availableNames[Math.floor(Math.random() * availableNames.length)];
+  }
+
+  let suffix = existingNames.length + 1;
+  while (usedNames.has(`party crasher ${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `Party Crasher ${suffix}`;
 }
 
 export function SimulatorClient({ games }: { games: Game[] }) {
@@ -67,6 +100,27 @@ export function SimulatorClient({ games }: { games: Game[] }) {
     }
 
     router.push(`/game/${gameId}?player=${data.playerId}`);
+  }
+
+  async function addRandomPlayer(gameId: string, existingNames: string[]) {
+    const response = await fetch(`/api/games/${gameId}/join`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: nextSimulatorPlayerName(existingNames),
+      }),
+    });
+
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(data.error ?? "Could not add a random simulator user.");
+      return;
+    }
+
+    router.refresh();
   }
 
   return (
@@ -139,6 +193,20 @@ export function SimulatorClient({ games }: { games: Game[] }) {
                   Open host dashboard
                 </Link>
                 <Link href={`/join/${game.inviteCode}`}>Open invite page</Link>
+                <button
+                  type="button"
+                  disabled={isPending || game.status !== "lobby"}
+                  onClick={() =>
+                    startTransition(async () => {
+                      await addRandomPlayer(
+                        game.id,
+                        game.players.map((player) => player.name),
+                      );
+                    })
+                  }
+                >
+                  Add random user
+                </button>
               </div>
               <form
                 className={styles.joinInline}

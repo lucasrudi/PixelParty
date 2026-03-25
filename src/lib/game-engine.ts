@@ -224,6 +224,18 @@ function chooseValidators(game: Game, playerId: string) {
   return candidates.map((player) => player.id);
 }
 
+export function assertCanManageGame(game: Game, playerId?: string) {
+  if (game.accessMode === "simulator") {
+    return;
+  }
+
+  if (playerId === game.hostPlayerId) {
+    return;
+  }
+
+  throw new Error("Only the host can manage this game.");
+}
+
 export function createGame(input: CreateGameInput): Game {
   if (!input.hostName.trim()) {
     throw new Error("The host needs a name.");
@@ -383,6 +395,34 @@ export function finishGame(game: Game) {
   ]);
 
   game.updatedAt = now();
+  return game;
+}
+
+export function resetGame(game: Game) {
+  const host = game.players.find((player) => player.id === game.hostPlayerId);
+  const initialBeat = getStoryBeat(1, game.totalDays);
+
+  game.status = "lobby";
+  game.currentDay = 0;
+  game.activeBeatId = initialBeat.id;
+  game.quests = [];
+  game.finaleCards = [];
+  game.players = game.players.map((player) => ({
+    ...player,
+    points: 0,
+    traits: buildTraits(),
+    activities: [],
+  }));
+  game.messages = [
+    createMessage(
+      "Lobby reset",
+      `${host?.name ?? "The host"} reset ${game.title}. The party is back in the lobby and ready for another run.`,
+      "all",
+      "timeline",
+    ),
+  ];
+  game.updatedAt = now();
+
   return game;
 }
 

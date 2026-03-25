@@ -91,3 +91,16 @@ export async function updateGame(
     return store.games[gameId];
   });
 }
+
+export async function deleteGame(gameId: string) {
+  return runExclusive(async () => {
+    const store = await readStore();
+
+    if (!store.games[gameId]) {
+      throw new Error("Game not found.");
+    }
+
+    delete store.games[gameId];
+    await writeStore(store);
+  });
+}

@@ -123,6 +123,36 @@ export function SimulatorClient({ games }: { games: Game[] }) {
     router.refresh();
   }
 
+  async function resetSim(gameId: string) {
+    const response = await fetch(`/api/games/${gameId}/reset`, {
+      method: "POST",
+    });
+
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(data.error ?? "Could not reset the simulator game.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  async function deleteSim(gameId: string) {
+    const response = await fetch(`/api/games/${gameId}`, {
+      method: "DELETE",
+    });
+
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(data.error ?? "Could not delete the simulator game.");
+      return;
+    }
+
+    router.refresh();
+  }
+
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
@@ -206,6 +236,36 @@ export function SimulatorClient({ games }: { games: Game[] }) {
                   }
                 >
                   Add random user
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    if (!window.confirm("Reset this simulator game back to the lobby?")) {
+                      return;
+                    }
+
+                    startTransition(async () => {
+                      await resetSim(game.id);
+                    });
+                  }}
+                >
+                  Reset game
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    if (!window.confirm("Delete this simulator game permanently?")) {
+                      return;
+                    }
+
+                    startTransition(async () => {
+                      await deleteSim(game.id);
+                    });
+                  }}
+                >
+                  Delete game
                 </button>
               </div>
               <form

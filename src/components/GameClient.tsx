@@ -114,16 +114,21 @@ export function GameClient({
   const activeBeat =
     journey[Math.max(game.currentDay - 1, 0)] ?? journey[journey.length - 1];
   const isHost = currentPlayer?.id === game.hostPlayerId;
+  const canManageGame = isHost || game.accessMode === "simulator";
   const showSimulatorSplitView =
     game.accessMode === "simulator" &&
     game.status === "active" &&
     game.players.length > 0;
 
-  async function runJsonAction(url: string, body?: Record<string, string>) {
+  async function runJsonAction(
+    url: string,
+    body?: Record<string, string>,
+    options?: { method?: "POST" | "DELETE"; redirectTo?: string },
+  ) {
     setError("");
 
     const response = await fetch(url, {
-      method: "POST",
+      method: options?.method ?? "POST",
       headers: body
         ? {
             "Content-Type": "application/json",
@@ -137,6 +142,11 @@ export function GameClient({
     if (!response.ok) {
       setError(data.error ?? "Something went wrong.");
       return false;
+    }
+
+    if (options?.redirectTo) {
+      router.push(options.redirectTo);
+      return true;
     }
 
     router.refresh();
@@ -653,10 +663,10 @@ export function GameClient({
             <Link href={`/join/${game.inviteCode}`}>Public join page</Link>
             {copyState ? <span className={styles.copyState}>{copyState}</span> : null}
           </div>
-          {isHost ? (
+          {canManageGame ? (
             <div className={styles.hostControls}>
               <div className={styles.panelHeader}>
-                <h2>Host controls</h2>
+                <h2>{isHost ? "Host controls" : "Simulator controls"}</h2>
                 <span>{game.accessMode === "simulator" ? "Simulator mode" : "Live flow"}</span>
               </div>
               <div className={styles.hostActions}>
@@ -676,7 +686,7 @@ export function GameClient({
                     Add random player
                   </button>
                 ) : null}
-                {game.status === "lobby" ? (
+                {isHost && game.status === "lobby" ? (
                   <button
                     type="button"
                     disabled={isPending}
@@ -689,7 +699,7 @@ export function GameClient({
                     Start game and trigger day 1
                   </button>
                 ) : null}
-                {game.status === "active" ? (
+                {isHost && game.status === "active" ? (
                   <button
                     type="button"
                     disabled={isPending}
@@ -704,7 +714,7 @@ export function GameClient({
                       : "Advance to next day"}
                   </button>
                 ) : null}
-                {game.status !== "finished" ? (
+                {isHost && game.status !== "finished" ? (
                   <button
                     type="button"
                     className={styles.ghostButton}
@@ -716,6 +726,57 @@ export function GameClient({
                     }
                   >
                     End game now
+                  </button>
+                ) : null}
+                {canManageGame ? (
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    disabled={isPending}
+                    onClick={() => {
+                      if (!window.confirm("Reset this game back to the lobby and keep the current roster?")) {
+                        return;
+                      }
+
+                      startTransition(async () => {
+                        await runJsonAction(
+                          `/api/games/${game.id}/reset`,
+                          isHost && currentPlayer
+                            ? { playerId: currentPlayer.id }
+                            : undefined,
+                        );
+                      });
+                    }}
+                  >
+                    Reset game
+                  </button>
+                ) : null}
+                {canManageGame ? (
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    disabled={isPending}
+                    onClick={() => {
+                      if (!window.confirm("Delete this game permanently? This cannot be undone.")) {
+                        return;
+                      }
+
+                      startTransition(async () => {
+                        await runJsonAction(
+                          `/api/games/${game.id}`,
+                          isHost && currentPlayer
+                            ? { playerId: currentPlayer.id }
+                            : undefined,
+                          {
+                            method: "DELETE",
+                            redirectTo:
+                              game.accessMode === "simulator" ? "/simulator" : "/",
+                          },
+                        );
+                      });
+                    }}
+                  >
+                    Delete game
                   </button>
                 ) : null}
               </div>

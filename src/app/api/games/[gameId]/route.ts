@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertCanManageGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
+import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { deleteGame, getGame } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,10 @@ export async function GET(
 
     if (!game) {
       return NextResponse.json({ error: "Game not found." }, { status: 404 });
+    }
+
+    if (game.accessMode === "simulator") {
+      assertSimulatorEnabled();
     }
 
     return NextResponse.json(game);
@@ -34,6 +39,10 @@ export async function DELETE(
 
     if (!game) {
       return NextResponse.json({ error: "Game not found." }, { status: 404 });
+    }
+
+    if (game.accessMode === "simulator") {
+      assertSimulatorEnabled();
     }
 
     assertCanManageGame(game, body.playerId);

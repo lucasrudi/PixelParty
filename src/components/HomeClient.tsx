@@ -25,7 +25,11 @@ const DEFAULT_GAME_TITLE = "Weekend of Bad Decisions";
 const DEFAULT_GROOM_NAME = "Tincho";
 const DEFAULT_HOST_NAME = "Fede";
 
-export function HomeClient() {
+export function HomeClient({
+  showSimulatorLink,
+}: {
+  showSimulatorLink: boolean;
+}) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -80,9 +84,11 @@ export function HomeClient() {
             <a href="#create" className={styles.primaryAction}>
               Create The Game
             </a>
-            <Link href="/simulator" className={styles.secondaryAction}>
-              Open Local Simulator
-            </Link>
+            {showSimulatorLink ? (
+              <Link href="/simulator" className={styles.secondaryAction}>
+                Open Local Simulator
+              </Link>
+            ) : null}
           </div>
           <div className={styles.telegramNote}>
             <strong>Telegram note.</strong> This MVP stores Telegram handles and produces Telegram-ready narrator messages. To deliver real bot DMs in production, each player still needs to start the bot once so their chat ID can be linked to the handle.

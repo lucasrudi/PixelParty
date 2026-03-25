@@ -27,9 +27,9 @@ If you want to run the Telegram-ready version in production today, the app serve
 ### What the server needs today
 
 1. Deploy the Next.js app behind HTTPS.
-2. Run the app with persistent storage for:
-   - `.data/games.json`
-   - `public/uploads/`
+2. Pick one persistence strategy:
+   - zero-config local storage with `.data/games.json` and `public/uploads/`
+   - external storage with Postgres for game state and Blob for uploaded proof media
 3. Expose the public app URL so players can open the web experience and join games.
 
 ### Telegram setup around the app
@@ -65,13 +65,29 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+The app defaults to local filesystem storage in development. If you want to force that behavior even when hosted env vars exist on your machine, add this to `.env.local`:
+
+```bash
+PIXELPARTY_GAME_STORAGE=filesystem
+PIXELPARTY_UPLOAD_STORAGE=filesystem
+```
+
 ## Deploying The Next.js App
 
-This project can be deployed like a normal Next.js app, but there is one important caveat: the current MVP writes game state and uploads to the local filesystem.
+This project can be deployed like a normal Next.js app. It supports two persistence shapes:
+
+- local filesystem storage for single-host development or a sandbox/VPS with mounted persistent disk
+- external storage for production-style Next.js hosting, using Postgres for game state and Blob for uploaded evidence
 
 ### Recommended deployment shape
 
-Use a Node.js host where the app can run with persistent disk storage, for example:
+For the most portable production deployment, use:
+
+- a Postgres database for `game.json`-equivalent state
+- Vercel Blob for uploaded photos and videos
+- any Node.js-compatible Next.js host for the app itself
+
+If you prefer to keep everything on one machine, the filesystem fallback still works on:
 
 - a VPS
 - a Docker container with a mounted volume
@@ -89,12 +105,44 @@ By default, `npm run start` serves the production app on port `3000`. Put it beh
 
 ### What must persist in production
 
-The deployment must preserve these paths between restarts and redeploys:
+If you stay on the local filesystem, the deployment must preserve these paths between restarts and redeploys:
 
 - `.data/games.json`
 - `public/uploads/`
 
-If those paths are ephemeral, game progress and uploaded evidence will be lost.
+If you externalize storage, those local paths are no longer required for production durability.
+
+### External storage setup
+
+The app now auto-detects external storage:
+
+- set `POSTGRES_URL` or `DATABASE_URL` to move game persistence out of `.data/games.json`
+- set `BLOB_READ_WRITE_TOKEN` to move uploaded evidence out of `public/uploads/`
+
+Optional overrides:
+
+- `PIXELPARTY_GAME_STORAGE=filesystem|postgres`
+- `PIXELPARTY_UPLOAD_STORAGE=filesystem|blob`
+- `PIXELPARTY_ENABLE_SIMULATOR=true|false`
+
+Example hosted configuration:
+
+```bash
+POSTGRES_URL=postgres://user:password@host:5432/pixelparty
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx
+```
+
+With that setup:
+
+- game reads and writes go to a `games` table in Postgres
+- uploaded photos and videos are stored in Blob under `evidence/...`
+- the app keeps the same API routes and UI behavior
+
+Production note:
+
+- in production, the local simulator is disabled by default
+- if you really want it on a hosted deployment, set `PIXELPARTY_ENABLE_SIMULATOR=true`
+- on serverless-style deployments, leaving game storage on the local filesystem now returns a clear configuration error instead of trying to write into an unavailable `.data` directory
 
 ### Environment and networking checklist
 
@@ -103,16 +151,19 @@ Before going live, make sure the server has:
 - Node.js installed
 - outbound internet access for user-uploaded proof URLs and future integrations
 - an HTTPS public domain
-- enough writable disk space for `.data/` and `public/uploads/`
+- either:
+  - enough writable disk space for `.data/` and `public/uploads/`, or
+  - access to your Postgres database and Blob bucket/token
 
 ### Important hosting note
 
-This app is not yet a good fit for fully ephemeral serverless deployments out of the box. Platforms that rebuild or replace the filesystem on each deploy will need a storage rewrite first, typically:
+The storage rewrite that used to be required for ephemeral Next.js hosting is now built in:
 
-- move game state from `.data/games.json` into a database
-- move uploaded files from `public/uploads/` into object storage
+- game state can live in Postgres
+- uploaded files can live in Blob
+- the filesystem remains available as a local fallback for simulator work and single-host setups
 
-Once those two pieces are externalized, the app will be much easier to run on serverless Next.js platforms.
+Edge Config was intentionally not used for live game state because this app updates game data frequently during play, while Edge Config is better suited to frequently read, infrequently changed configuration data such as flags, redirects, or feature switches.
 
 ## Main Routes
 
@@ -131,4 +182,4 @@ npm run build
 
 ## Persistence
 
-Game state is stored in `.data/games.json` while the app runs locally. Uploaded proof files are stored in `public/uploads/`. Both are ignored by git.
+By default, local development stores game state in `.data/games.json` and uploaded proof files in `public/uploads/`. In hosted environments, you can externalize those two pieces with Postgres and Blob while keeping the same application code paths.

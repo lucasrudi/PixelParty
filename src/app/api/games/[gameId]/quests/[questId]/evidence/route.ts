@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { submitEvidence } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
+import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 import { saveBrowserFile } from "@/lib/uploads";
 
@@ -26,14 +27,18 @@ export async function POST(
       fileName = saved.fileName;
     }
 
-    const game = await updateGame(gameId, (current) =>
-      submitEvidence(current, playerId, questId, {
+    const game = await updateGame(gameId, (current) => {
+      if (current.accessMode === "simulator") {
+        assertSimulatorEnabled();
+      }
+
+      return submitEvidence(current, playerId, questId, {
         description,
         kind: kind === "video" ? "video" : "photo",
         assetUrl,
         fileName,
-      }),
-    );
+      });
+    });
 
     return NextResponse.json({ ok: true, gameId: game.id, questId });
   } catch (error) {

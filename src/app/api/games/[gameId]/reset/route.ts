@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertCanManageGame, resetGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
+import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 
 export async function POST(
@@ -12,6 +13,10 @@ export async function POST(
     const body = (await request.json().catch(() => ({}))) as { playerId?: string };
 
     const game = await updateGame(gameId, (current) => {
+      if (current.accessMode === "simulator") {
+        assertSimulatorEnabled();
+      }
+
       assertCanManageGame(current, body.playerId);
       return resetGame(current);
     });

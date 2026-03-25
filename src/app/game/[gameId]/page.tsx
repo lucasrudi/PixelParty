@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { GameClient } from "@/components/GameClient";
+import { isSimulatorEnabled } from "@/lib/storage-config";
 import { getGame } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,10 @@ export default async function GamePage({
   const game = await getGame(gameId);
 
   if (!game) {
+    notFound();
+  }
+
+  if (game.accessMode === "simulator" && !isSimulatorEnabled()) {
     notFound();
   }
 

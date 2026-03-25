@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { advanceDay } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
+import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 
 export async function POST(
@@ -9,8 +10,19 @@ export async function POST(
 ) {
   try {
     const { gameId } = await context.params;
-    const game = await updateGame(gameId, (current) => advanceDay(current));
-    return NextResponse.json({ ok: true, gameId: game.id, currentDay: game.currentDay, status: game.status });
+    const game = await updateGame(gameId, (current) => {
+      if (current.accessMode === "simulator") {
+        assertSimulatorEnabled();
+      }
+
+      return advanceDay(current);
+    });
+    return NextResponse.json({
+      ok: true,
+      gameId: game.id,
+      currentDay: game.currentDay,
+      status: game.status,
+    });
   } catch (error) {
     return jsonError(error);
   }

@@ -197,6 +197,228 @@
   box-shadow: 8px 8px 0 rgba(19, 24, 45, 0.18);
 }
 
+.finaleOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.finaleBackdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top, rgba(255, 194, 96, 0.34), transparent 34%),
+    linear-gradient(180deg, rgba(10, 12, 24, 0.22), rgba(10, 12, 24, 0.94)),
+    url("/pixelforge/backgrounds/bg_church.png") center/cover no-repeat;
+}
+
+.finaleCinema {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1.2rem;
+  width: min(100%, 56rem);
+  padding: 1.5rem;
+  background: rgba(12, 15, 30, 0.86);
+  border: 4px solid #ffca67;
+  box-shadow: 0 0 0 6px rgba(19, 24, 45, 0.42);
+  color: #fff7e6;
+}
+
+.finaleKicker {
+  width: fit-content;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(255, 202, 103, 0.18);
+  border: 1px solid rgba(255, 202, 103, 0.45);
+}
+
+.finaleCinema h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 3.2rem);
+  line-height: 1.05;
+}
+
+.finaleFrames {
+  position: relative;
+  min-height: 26rem;
+}
+
+.finaleFrame {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  padding: 1.2rem;
+  opacity: 0;
+  transform: scale(0.98);
+  border: 3px solid rgba(255, 247, 230, 0.14);
+  animation: finale-frame 9s linear forwards;
+}
+
+.finaleFrameWide {
+  background:
+    linear-gradient(180deg, rgba(8, 11, 22, 0.35), rgba(8, 11, 22, 0.82)),
+    url("/pixelforge/backgrounds/bg_khaosan.png") center/cover no-repeat;
+}
+
+.finaleFrameCheer {
+  background:
+    linear-gradient(180deg, rgba(8, 11, 22, 0.28), rgba(8, 11, 22, 0.84)),
+    url("/pixelforge/backgrounds/bg_soi6.png") center/cover no-repeat;
+  animation-delay: 3s;
+}
+
+.finaleFrameWinner {
+  background:
+    linear-gradient(180deg, rgba(8, 11, 22, 0.18), rgba(8, 11, 22, 0.8)),
+    url("/pixelforge/backgrounds/bg_church.png") center/cover no-repeat;
+  animation-delay: 6s;
+}
+
+.finaleFrameTag {
+  width: fit-content;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: rgba(255, 202, 103, 0.2);
+  border: 1px solid rgba(255, 202, 103, 0.45);
+}
+
+.finaleFrame strong {
+  max-width: 18ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 0.98;
+}
+
+.finaleFrame p {
+  max-width: 48ch;
+  line-height: 1.6;
+}
+
+.finaleScene,
+.spotlightGrid,
+.trophyShelf {
+  display: grid;
+  gap: 1rem;
+}
+
+.finaleScene {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  align-items: end;
+  margin-top: auto;
+}
+
+.finaleSpriteWrap {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.75rem;
+  background: rgba(255, 247, 230, 0.08);
+  border: 2px solid rgba(255, 247, 230, 0.12);
+}
+
+.finaleSprite {
+  image-rendering: pixelated;
+  animation: finale-bob 1.25s ease-in-out infinite alternate;
+}
+
+.finaleScript {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.finaleLine {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: finale-line 1s ease forwards;
+}
+
+.cheerStrip {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: auto;
+}
+
+.cheerChip {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.8rem;
+  background: rgba(255, 247, 230, 0.12);
+  border: 2px solid rgba(255, 247, 230, 0.15);
+}
+
+.winnerShowcase {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(140px, 0.5fr) minmax(0, 1fr);
+  align-items: stretch;
+  margin-top: auto;
+}
+
+.winnerBadge {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 202, 103, 0.2);
+  border: 2px solid rgba(255, 202, 103, 0.4);
+}
+
+.winnerBadge span {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.winnerBadge strong {
+  max-width: none;
+  font-size: 1.2rem;
+}
+
+.winnerProof {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cinematicEvidence {
+  width: 100%;
+  min-height: 14rem;
+  max-height: 18rem;
+  border: 3px solid #ffca67;
+  object-fit: cover;
+  background: rgba(19, 24, 45, 0.4);
+}
+
+.cinematicEvidenceFallback,
+.winnerProofCaption {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  background: rgba(255, 247, 230, 0.12);
+  border: 2px solid rgba(255, 247, 230, 0.14);
+}
+
+.winnerProofCaption span {
+  width: fit-content;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(255, 202, 103, 0.16);
+  border: 1px solid rgba(255, 202, 103, 0.34);
+}
+
 .panelHeaderSplit,
 .validationHeader {
   display: flex;
@@ -280,6 +502,23 @@
   gap: 0.45rem;
 }
 
+.activityPrompt {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem;
+  background: rgba(255, 214, 121, 0.16);
+  border: 2px solid rgba(255, 180, 82, 0.32);
+}
+
+.activityPrompt strong {
+  color: #13182d;
+}
+
+.activityPrompt p {
+  max-width: none;
+  color: #4a5679;
+}
+
 .form textarea,
 .form input,
 .form select {
@@ -320,9 +559,78 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
+.finaleStory {
+  display: grid;
+  gap: 0.75rem;
+  color: #263150;
+}
+
 .podiumCard {
   justify-items: start;
   background: linear-gradient(180deg, rgba(255, 209, 102, 0.72), rgba(255, 247, 230, 0.96));
+}
+
+.spotlightGrid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.spotlightCard {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 3px solid #13182d;
+  box-shadow: 6px 6px 0 rgba(19, 24, 45, 0.18);
+}
+
+.spotlightGold {
+  background: linear-gradient(180deg, rgba(255, 208, 91, 0.8), rgba(255, 247, 230, 0.98));
+}
+
+.spotlightSilver {
+  background: linear-gradient(180deg, rgba(212, 221, 233, 0.82), rgba(255, 247, 230, 0.98));
+}
+
+.spotlightBronze {
+  background: linear-gradient(180deg, rgba(215, 155, 107, 0.82), rgba(255, 247, 230, 0.98));
+}
+
+.spotlightHeader {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.spotlightHeader span {
+  width: fit-content;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(19, 24, 45, 0.1);
+  border: 1px solid rgba(19, 24, 45, 0.15);
+}
+
+.spotlightHeader strong {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: #13182d;
+}
+
+.spotlightPoints,
+.spotlightAchievement {
+  color: #263150;
+}
+
+.spotlightFallback {
+  display: grid;
+  justify-items: start;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  background: rgba(255, 249, 236, 0.72);
+  border: 2px solid rgba(19, 24, 45, 0.18);
+}
+
+.trophyShelf {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .errorPanel {
@@ -352,6 +660,47 @@
   background: rgba(19, 24, 45, 0.08);
   border-color: rgba(19, 24, 45, 0.18);
   color: #13182d;
+}
+
+@keyframes finale-bob {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes finale-frame {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  8%,
+  29% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  33%,
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes finale-line {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (min-width: 1101px) {
@@ -388,5 +737,15 @@
   .playerBoardGrid {
     grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     align-items: start;
+  }
+}
+
+@media (max-width: 720px) {
+  .finaleFrames {
+    min-height: 32rem;
+  }
+
+  .winnerShowcase {
+    grid-template-columns: 1fr;
   }
 }

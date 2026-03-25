@@ -65,6 +65,55 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Deploying The Next.js App
+
+This project can be deployed like a normal Next.js app, but there is one important caveat: the current MVP writes game state and uploads to the local filesystem.
+
+### Recommended deployment shape
+
+Use a Node.js host where the app can run with persistent disk storage, for example:
+
+- a VPS
+- a Docker container with a mounted volume
+- a traditional Node hosting setup with writable persistent storage
+
+### Build and run
+
+```bash
+npm install
+npm run build
+npm run start
+```
+
+By default, `npm run start` serves the production app on port `3000`. Put it behind HTTPS with a reverse proxy such as Nginx, Caddy, or your platform's ingress.
+
+### What must persist in production
+
+The deployment must preserve these paths between restarts and redeploys:
+
+- `.data/games.json`
+- `public/uploads/`
+
+If those paths are ephemeral, game progress and uploaded evidence will be lost.
+
+### Environment and networking checklist
+
+Before going live, make sure the server has:
+
+- Node.js installed
+- outbound internet access for user-uploaded proof URLs and future integrations
+- an HTTPS public domain
+- enough writable disk space for `.data/` and `public/uploads/`
+
+### Important hosting note
+
+This app is not yet a good fit for fully ephemeral serverless deployments out of the box. Platforms that rebuild or replace the filesystem on each deploy will need a storage rewrite first, typically:
+
+- move game state from `.data/games.json` into a database
+- move uploaded files from `public/uploads/` into object storage
+
+Once those two pieces are externalized, the app will be much easier to run on serverless Next.js platforms.
+
 ## Main Routes
 
 - `/` — landing page and Telegram-ready game creation

@@ -21,6 +21,11 @@ const SIMULATOR_NAMES = [
   "Bauti",
 ];
 
+const DEFAULT_SIM_TITLE = "Weekend of Bad Decisions";
+const DEFAULT_SIM_GROOM_NAME = "Tincho";
+const DEFAULT_SIM_HOST_NAME = "Fede";
+const DEFAULT_SIM_JOIN_NAME = "Mauri";
+
 function offsetDate(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -58,11 +63,13 @@ export function SimulatorClient({ games }: { games: Game[] }) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        groomName: String(formData.get("groomName") ?? ""),
-        hostName: String(formData.get("hostName") ?? ""),
+        groomName:
+          String(formData.get("groomName") ?? "").trim() || DEFAULT_SIM_GROOM_NAME,
+        hostName:
+          String(formData.get("hostName") ?? "").trim() || DEFAULT_SIM_HOST_NAME,
         startDate: String(formData.get("startDate") ?? ""),
         endDate: String(formData.get("endDate") ?? ""),
-        title: String(formData.get("title") ?? ""),
+        title: String(formData.get("title") ?? "").trim() || DEFAULT_SIM_TITLE,
         accessMode: "simulator",
       }),
     });
@@ -88,7 +95,7 @@ export function SimulatorClient({ games }: { games: Game[] }) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: String(formData.get("name") ?? ""),
+        name: String(formData.get("name") ?? "").trim() || DEFAULT_SIM_JOIN_NAME,
       }),
     });
 
@@ -123,6 +130,36 @@ export function SimulatorClient({ games }: { games: Game[] }) {
     router.refresh();
   }
 
+  async function resetSim(gameId: string) {
+    const response = await fetch(`/api/games/${gameId}/reset`, {
+      method: "POST",
+    });
+
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(data.error ?? "Could not reset the simulator game.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  async function deleteSim(gameId: string) {
+    const response = await fetch(`/api/games/${gameId}`, {
+      method: "DELETE",
+    });
+
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(data.error ?? "Could not delete the simulator game.");
+      return;
+    }
+
+    router.refresh();
+  }
+
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
@@ -146,15 +183,15 @@ export function SimulatorClient({ games }: { games: Game[] }) {
           <h2>New simulator game</h2>
           <label>
             Optional title
-            <input name="title" placeholder="Weekend of Bad Decisions" />
+            <input name="title" placeholder={DEFAULT_SIM_TITLE} />
           </label>
           <label>
             Groom name
-            <input name="groomName" placeholder="Tincho" required />
+            <input name="groomName" placeholder={DEFAULT_SIM_GROOM_NAME} />
           </label>
           <label>
             Host name
-            <input name="hostName" placeholder="Fede" required />
+            <input name="hostName" placeholder={DEFAULT_SIM_HOST_NAME} />
           </label>
           <div className={styles.dateRow}>
             <label>
@@ -207,6 +244,36 @@ export function SimulatorClient({ games }: { games: Game[] }) {
                 >
                   Add random user
                 </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    if (!window.confirm("Reset this simulator game back to the lobby?")) {
+                      return;
+                    }
+
+                    startTransition(async () => {
+                      await resetSim(game.id);
+                    });
+                  }}
+                >
+                  Reset game
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    if (!window.confirm("Delete this simulator game permanently?")) {
+                      return;
+                    }
+
+                    startTransition(async () => {
+                      await deleteSim(game.id);
+                    });
+                  }}
+                >
+                  Delete game
+                </button>
               </div>
               <form
                 className={styles.joinInline}
@@ -217,7 +284,7 @@ export function SimulatorClient({ games }: { games: Game[] }) {
                   });
                 }}
               >
-                <input name="name" placeholder="Join as Mauri" required />
+                <input name="name" placeholder={DEFAULT_SIM_JOIN_NAME} />
                 <button type="submit" disabled={isPending || game.status !== "lobby"}>
                   Quick join
                 </button>

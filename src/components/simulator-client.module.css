@@ -20,6 +20,11 @@
   background: rgba(255, 248, 233, 0.95);
 }
 
+.gameCard {
+  display: grid;
+  gap: 1.2rem;
+}
+
 .eyebrow,
 .status {
   font-size: 0.72rem;
@@ -94,6 +99,14 @@
 .cardActions,
 .playerLinks {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.joinInline {
+  margin-top: 0.45rem;
+}
+
+.playerLinks {
+  margin-top: 0.7rem;
 }
 
 .cardActions a,

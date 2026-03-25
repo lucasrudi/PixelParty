@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 import { Game } from "@/lib/types";
 import styles from "./join-client.module.css";
 
+const DEFAULT_PLAYER_NAME = "Luqui";
+
 export function JoinClient({ game }: { game: Game }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -19,7 +21,7 @@ export function JoinClient({ game }: { game: Game }) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: String(formData.get("name") ?? ""),
+        name: String(formData.get("name") ?? "").trim() || DEFAULT_PLAYER_NAME,
         telegramHandle: String(formData.get("telegramHandle") ?? ""),
       }),
     });
@@ -57,7 +59,7 @@ export function JoinClient({ game }: { game: Game }) {
         >
           <label>
             Your name
-            <input name="name" placeholder="Luqui" required />
+            <input name="name" placeholder={DEFAULT_PLAYER_NAME} />
           </label>
           {game.accessMode === "telegram" ? (
             <label>

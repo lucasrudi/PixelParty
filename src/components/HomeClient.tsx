@@ -21,6 +21,10 @@ const SAMPLE_CREW = [
   { key: "seba", label: "The Chronicler" },
 ];
 
+const DEFAULT_GAME_TITLE = "Weekend of Bad Decisions";
+const DEFAULT_GROOM_NAME = "Tincho";
+const DEFAULT_HOST_NAME = "Fede";
+
 export function HomeClient() {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -30,11 +34,11 @@ export function HomeClient() {
     setError("");
 
     const payload = {
-      title: String(formData.get("title") ?? ""),
-      groomName: String(formData.get("groomName") ?? ""),
+      title: String(formData.get("title") ?? "").trim() || DEFAULT_GAME_TITLE,
+      groomName: String(formData.get("groomName") ?? "").trim() || DEFAULT_GROOM_NAME,
       startDate: String(formData.get("startDate") ?? ""),
       endDate: String(formData.get("endDate") ?? ""),
-      hostName: String(formData.get("hostName") ?? ""),
+      hostName: String(formData.get("hostName") ?? "").trim() || DEFAULT_HOST_NAME,
       telegramHandle: String(formData.get("telegramHandle") ?? ""),
       accessMode: "telegram" as const,
     };
@@ -167,15 +171,15 @@ export function HomeClient() {
         >
           <label>
             Game title
-            <input name="title" placeholder="Optional custom title" />
+            <input name="title" placeholder={DEFAULT_GAME_TITLE} />
           </label>
           <label>
             Groom name
-            <input name="groomName" placeholder="Tincho" required />
+            <input name="groomName" placeholder={DEFAULT_GROOM_NAME} />
           </label>
           <label>
             Host name
-            <input name="hostName" placeholder="Fede" required />
+            <input name="hostName" placeholder={DEFAULT_HOST_NAME} />
           </label>
           <label>
             Host Telegram

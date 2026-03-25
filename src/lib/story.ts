@@ -306,6 +306,52 @@ export function buildActivityReply(player: Player, summary: string): string {
   return `${player.name} is leaning into their ${TRAIT_TITLES[dominantTrait]} arc. The narrator is adjusting tomorrow's trouble accordingly.`;
 }
 
+export function buildActivityPrompt(
+  player: Player,
+  dayNumber: number,
+  totalDays: number,
+  beat: StoryBeat,
+) {
+  const dominantTrait = detectDominantTrait(player);
+  const promptSeed =
+    (player.name.length + dayNumber + totalDays + beat.location.length) % 5;
+
+  const prompts = [
+    {
+      label: "What chapter is your character living right now?",
+      hint: `The narrator is framing ${beat.location} as ${beat.mood.toLowerCase()}. Give the scene one vivid detail from your run.`,
+      placeholder:
+        "Who are you with, what are you chasing, and what tiny detail proves this night is already getting out of hand?",
+    },
+    {
+      label: "Pitch your current scene to the narrator",
+      hint: `Lean into your ${TRAIT_TITLES[dominantTrait]} energy and describe the move, the vibe, and the stakes.`,
+      placeholder:
+        "Set the scene like a trailer shot: where are you, what is the crew doing, and what chaos or clutch move is brewing?",
+    },
+    {
+      label: "What’s the headline of your day so far?",
+      hint: `Day ${dayNumber} of ${totalDays} needs a story beat the group chat will quote later.`,
+      placeholder:
+        "Give the narrator the best headline-worthy update: the mission, the problem, the unexpected ally, or the legendary mistake.",
+    },
+    {
+      label: "Tell the narrator how your arc is evolving",
+      hint: `${beat.label} is live. Share the context that explains why your next move matters.`,
+      placeholder:
+        "Explain your current plan, the mood around you, and the detail that makes this moment feel iconic, risky, or completely absurd.",
+    },
+    {
+      label: "Drop the field report from your corner of the trip",
+      hint: `The narrator wants texture, not just logistics. Feed them the atmosphere, the cast, and the twist.`,
+      placeholder:
+        "Where did the story pull you, who’s involved, and what has the energy shifted into over the last hour?",
+    },
+  ];
+
+  return prompts[promptSeed];
+}
+
 export function buildFinaleCards(game: Game) {
   return game.players
     .map((player) => {

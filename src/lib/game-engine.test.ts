@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateQuest } from "@/lib/game-engine";
+import { resetGame, validateQuest } from "@/lib/game-engine";
 import {
   buildStartedSimulatorGame,
   buildStartedTelegramGame,
@@ -78,5 +78,24 @@ describe("game validation flow", () => {
         note: "Self-approved",
       }),
     ).toThrow("cannot validate your own quest");
+  });
+
+  it("resets a game back to the lobby while keeping the roster", () => {
+    const { game, host, mauri, seba } = buildStartedSimulatorGame();
+
+    submitPendingEvidence(game, mauri.id, "Mauri proof");
+    game.players.find((player) => player.id === seba.id)!.points = 200;
+
+    const reset = resetGame(game);
+
+    expect(reset.status).toBe("lobby");
+    expect(reset.currentDay).toBe(0);
+    expect(reset.players.map((player) => player.id)).toEqual([host.id, mauri.id, seba.id]);
+    expect(reset.players.every((player) => player.points === 0)).toBe(true);
+    expect(reset.players.every((player) => player.activities.length === 0)).toBe(true);
+    expect(reset.quests).toHaveLength(0);
+    expect(reset.finaleCards).toHaveLength(0);
+    expect(reset.messages).toHaveLength(1);
+    expect(reset.messages[0]?.title).toBe("Lobby reset");
   });
 });

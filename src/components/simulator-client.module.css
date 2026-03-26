@@ -122,6 +122,34 @@
   background: rgba(243, 236, 220, 0.92);
 }
 
+.tagFieldset {
+  border: 2px solid #13182d;
+  padding: 0.75rem 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tagFieldset legend {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  padding: 0 0.4rem;
+}
+
+.tagLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.tagLabel input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  min-height: auto;
+  padding: 0;
+}
+
 .error {
   color: #a91919;
 }

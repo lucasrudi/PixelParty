@@ -234,6 +234,36 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.tagFieldset {
+  border: 2px solid rgba(255, 248, 233, 0.3);
+  padding: 0.75rem 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tagFieldset legend {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  padding: 0 0.4rem;
+  color: #fff7e6;
+}
+
+.tagLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #d9cbb8;
+}
+
+.tagLabel input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  min-height: auto;
+  padding: 0;
+}
+
 .error {
   color: #ffb2a3;
 }

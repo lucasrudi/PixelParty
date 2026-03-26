@@ -45,6 +45,11 @@ export function HomeClient({
       hostName: String(formData.get("hostName") ?? "").trim() || DEFAULT_HOST_NAME,
       telegramHandle: String(formData.get("telegramHandle") ?? ""),
       accessMode: "telegram" as const,
+      enabledTags: [
+        formData.get("tag_alcohol") ? "alcohol" : null,
+        formData.get("tag_locuras") ? "locuras" : null,
+        formData.get("tag_vegas") ? "vegas" : null,
+      ].filter(Boolean),
     };
 
     startTransition(async () => {
@@ -201,6 +206,21 @@ export function HomeClient({
               <input name="endDate" type="date" defaultValue={offsetDate(3)} required />
             </label>
           </div>
+          <fieldset className={styles.tagFieldset}>
+            <legend>Quest spice level</legend>
+            <label className={styles.tagLabel}>
+              <input type="checkbox" name="tag_alcohol" defaultChecked />
+              Alcohol quests
+            </label>
+            <label className={styles.tagLabel}>
+              <input type="checkbox" name="tag_locuras" defaultChecked />
+              Wild dares
+            </label>
+            <label className={styles.tagLabel}>
+              <input type="checkbox" name="tag_vegas" />
+              Vegas rules (no-filter confessions)
+            </label>
+          </fieldset>
           {error ? <p className={styles.error}>{error}</p> : null}
           <button type="submit" disabled={isPending}>
             {isPending ? "Opening lobby..." : "Create Telegram-Ready Game"}

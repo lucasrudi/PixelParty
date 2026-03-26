@@ -6,6 +6,7 @@ import {
   Player,
   PlayerTrait,
   Quest,
+  QuestTagToggle,
   SubmitActivityInput,
   SubmitEvidenceInput,
   ValidateQuestInput,
@@ -14,10 +15,10 @@ import {
   buildActivityReply,
   buildDayNarration,
   buildFinaleCards,
-  buildQuestForPlayer,
   getStoryBeat,
   updateTraitsFromSummary,
 } from "@/lib/story";
+import { drawQuest } from "@/lib/quest-pool";
 
 const AVATAR_KEYS = [
   "tincho",
@@ -151,18 +152,45 @@ function addMessages(game: Game, messages: GameMessage[]) {
   game.messages.push(...messages);
 }
 
+function findGroomPlayer(game: Game): Player | undefined {
+  const groomNameLower = game.groomName.toLowerCase();
+  return game.players.find((p) => p.name.toLowerCase() === groomNameLower);
+}
+
 function assignQuest(game: Game, player: Player) {
   const beat = getStoryBeat(game.currentDay, game.totalDays);
-  const questBlueprint = buildQuestForPlayer(player, game.currentDay, game.totalDays);
+  const hostPlayer = game.players.find((p) => p.id === game.hostPlayerId);
+  const groomPlayer = findGroomPlayer(game);
+
+  const isGroom = groomPlayer?.id === player.id;
+  const isHost = game.hostPlayerId === player.id;
+
+  const usedTexts = new Set(game.usedQuestTexts ?? []);
+
+  const drawn = drawQuest(
+    player.name,
+    isGroom,
+    isHost,
+    game.groomName,
+    hostPlayer?.name ?? "Host",
+    game.currentDay,
+    game.totalDays,
+    (game.enabledTags ?? []) as import("@/lib/quest-pool").QuestTag[],
+    usedTexts,
+  );
+
+  // Track raw pool text to avoid repeats across players
+  if (!game.usedQuestTexts) game.usedQuestTexts = [];
+  game.usedQuestTexts.push(drawn.sourceText);
 
   const quest: Quest = {
     id: createId("quest"),
     playerId: player.id,
     dayNumber: game.currentDay,
-    title: questBlueprint.title,
-    brief: questBlueprint.brief,
-    evidencePrompt: questBlueprint.evidencePrompt,
-    points: questBlueprint.points,
+    title: drawn.title,
+    brief: drawn.brief,
+    evidencePrompt: drawn.evidencePrompt,
+    points: drawn.points,
     sceneId: beat.id,
     status: "assigned",
     createdAt: now(),
@@ -175,7 +203,7 @@ function assignQuest(game: Game, player: Player) {
   addMessages(game, [
     createMessage(
       `Day ${game.currentDay} quest for ${player.name}`,
-      `${quest.title} worth ${quest.points} points. ${quest.brief} Evidence: ${quest.evidencePrompt}`,
+      `${quest.title} worth ${quest.points} points. ${quest.brief}`,
       "player",
       game.accessMode === "telegram" ? "telegram-ready" : "simulator",
       player.id,
@@ -261,6 +289,10 @@ export function createGame(input: CreateGameInput): Game {
   );
   const initialBeat = getStoryBeat(1, totalDays);
 
+  const validTags: QuestTagToggle[] = (input.enabledTags ?? []).filter(
+    (tag): tag is QuestTagToggle => ["alcohol", "locuras", "vegas"].includes(tag),
+  );
+
   const game: Game = {
     id: createId("game"),
     inviteCode: createInviteCode(),
@@ -276,6 +308,8 @@ export function createGame(input: CreateGameInput): Game {
     createdAt: now(),
     updatedAt: now(),
     hostPlayerId: host.id,
+    enabledTags: validTags,
+    usedQuestTexts: [],
     players: [host],
     quests: [],
     messages: [
@@ -407,6 +441,7 @@ export function resetGame(game: Game) {
   game.activeBeatId = initialBeat.id;
   game.quests = [];
   game.finaleCards = [];
+  game.usedQuestTexts = [];
   game.players = game.players.map((player) => ({
     ...player,
     points: 0,

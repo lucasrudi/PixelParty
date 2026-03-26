@@ -71,6 +71,11 @@ export function SimulatorClient({ games }: { games: Game[] }) {
         endDate: String(formData.get("endDate") ?? ""),
         title: String(formData.get("title") ?? "").trim() || DEFAULT_SIM_TITLE,
         accessMode: "simulator",
+        enabledTags: [
+          formData.get("tag_alcohol") ? "alcohol" : null,
+          formData.get("tag_locuras") ? "locuras" : null,
+          formData.get("tag_vegas") ? "vegas" : null,
+        ].filter(Boolean),
       }),
     });
 
@@ -203,6 +208,21 @@ export function SimulatorClient({ games }: { games: Game[] }) {
               <input name="endDate" type="date" defaultValue={offsetDate(2)} required />
             </label>
           </div>
+          <fieldset className={styles.tagFieldset}>
+            <legend>Quest spice level</legend>
+            <label className={styles.tagLabel}>
+              <input type="checkbox" name="tag_alcohol" defaultChecked />
+              Alcohol quests
+            </label>
+            <label className={styles.tagLabel}>
+              <input type="checkbox" name="tag_locuras" defaultChecked />
+              Wild dares
+            </label>
+            <label className={styles.tagLabel}>
+              <input type="checkbox" name="tag_vegas" />
+              Vegas rules (no-filter confessions)
+            </label>
+          </fieldset>
           {error ? <p className={styles.error}>{error}</p> : null}
           <button type="submit" disabled={isPending}>
             {isPending ? "Creating..." : "Create simulator game"}

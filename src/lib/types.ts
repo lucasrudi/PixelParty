@@ -99,6 +99,8 @@ export interface FinaleCard {
   description: string;
 }
 
+export type QuestTagToggle = "alcohol" | "locuras" | "vegas";
+
 export interface Game {
   id: string;
   inviteCode: string;
@@ -114,6 +116,8 @@ export interface Game {
   createdAt: string;
   updatedAt: string;
   hostPlayerId: string;
+  enabledTags: QuestTagToggle[];
+  usedQuestTexts: string[];
   players: Player[];
   quests: Quest[];
   messages: GameMessage[];
@@ -128,6 +132,7 @@ export interface CreateGameInput {
   hostName: string;
   telegramHandle?: string;
   accessMode: AccessMode;
+  enabledTags?: QuestTagToggle[];
 }
 
 export interface JoinGameInput {

@@ -65,6 +65,7 @@ export interface Player {
   id: string;
   name: string;
   telegramHandle: string;
+  telegramBindingToken?: string;
   joinedAt: string;
   points: number;
   avatarKey: string;
@@ -91,6 +92,7 @@ export interface GameMessage {
   title: string;
   body: string;
   createdAt: string;
+  telegramDeliveredTo?: string[];
 }
 
 export interface FinaleCard {

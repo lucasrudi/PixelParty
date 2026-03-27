@@ -3,6 +3,7 @@ import { submitActivity } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
+import { deliverTelegramReadyMessages } from "@/lib/telegram-delivery";
 import { SubmitActivityInput } from "@/lib/types";
 
 export async function POST(
@@ -19,6 +20,7 @@ export async function POST(
 
       return submitActivity(current, playerId, body);
     });
+    await deliverTelegramReadyMessages(game.id);
     return NextResponse.json({ ok: true, gameId: game.id, playerId });
   } catch (error) {
     return jsonError(error);

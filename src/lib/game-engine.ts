@@ -51,6 +51,10 @@ function createInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function createBindingToken() {
+  return crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+}
+
 function now() {
   return new Date().toISOString();
 }
@@ -118,6 +122,7 @@ function createPlayer(
     id: createId("player"),
     name: toTitleCase(name.trim()),
     telegramHandle: sanitizeTelegramHandle(telegramHandle),
+    telegramBindingToken: createBindingToken(),
     joinedAt: now(),
     points: 0,
     avatarKey: selectAvatar(usedAvatars),

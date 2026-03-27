@@ -27,8 +27,12 @@ const DEFAULT_HOST_NAME = "Fede";
 
 export function HomeClient({
   showSimulatorLink,
+  telegramBotUrl,
+  telegramBotUsername,
 }: {
   showSimulatorLink: boolean;
+  telegramBotUrl?: string | null;
+  telegramBotUsername?: string | null;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -94,9 +98,20 @@ export function HomeClient({
                 Open Local Simulator
               </Link>
             ) : null}
+            {telegramBotUrl ? (
+              <a
+                href={telegramBotUrl}
+                className={styles.secondaryAction}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open Telegram Bot
+              </a>
+            ) : null}
           </div>
           <div className={styles.telegramNote}>
-            <strong>Telegram note.</strong> This MVP stores Telegram handles and produces Telegram-ready narrator messages. To deliver real bot DMs in production, each player still needs to start the bot once so their chat ID can be linked to the handle.
+            <strong>Telegram note.</strong> This app now reads the bot configuration from environment variables for server-side Telegram integration, but gameplay delivery is still Telegram-ready rather than full Telegram DM automation. Players should still start the bot once and use the same handle they enter in the app.
+            {telegramBotUsername ? ` Current bot: @${telegramBotUsername}.` : ""}
           </div>
         </div>
         <div className={styles.sceneCard}>

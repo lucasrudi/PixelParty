@@ -3,6 +3,7 @@ import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 import { validateQuest } from "@/lib/game-engine";
+import { deliverTelegramReadyMessages } from "@/lib/telegram-delivery";
 import { ValidateQuestInput } from "@/lib/types";
 
 export async function POST(
@@ -24,6 +25,7 @@ export async function POST(
       });
     });
 
+    await deliverTelegramReadyMessages(game.id);
     return NextResponse.json({ ok: true, gameId: game.id, questId });
   } catch (error) {
     return jsonError(error);

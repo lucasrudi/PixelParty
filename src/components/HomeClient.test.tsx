@@ -47,4 +47,19 @@ describe("HomeClient", () => {
       expect(mockRouter.push).toHaveBeenCalledWith("/game/game_123?player=player_123");
     });
   });
+
+  it("renders the Telegram bot link when a username is configured", () => {
+    render(
+      <HomeClient
+        showSimulatorLink={false}
+        telegramBotUrl="https://t.me/pixel_party_bot"
+        telegramBotUsername="pixel_party_bot"
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: /open telegram bot/i }),
+    ).toHaveAttribute("href", "https://t.me/pixel_party_bot");
+    expect(screen.getByText(/current bot: @pixel_party_bot/i)).toBeInTheDocument();
+  });
 });

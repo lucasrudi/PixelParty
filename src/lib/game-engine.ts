@@ -51,10 +51,6 @@ function createInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
-function createBindingToken() {
-  return crypto.randomUUID().replaceAll("-", "").slice(0, 20);
-}
-
 function now() {
   return new Date().toISOString();
 }
@@ -676,6 +672,10 @@ export function validateQuest(
 
   if (quest.playerId === validatorId) {
     throw new Error("You cannot validate your own quest.");
+  }
+
+  if (!quest.validators.includes(validatorId)) {
+    throw new Error("You are not assigned to validate this quest.");
   }
 
   if (

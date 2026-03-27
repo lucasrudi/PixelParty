@@ -102,8 +102,6 @@ describe("game validation flow", () => {
     const { game, mauri, seba } = buildStartedTelegramGame();
     const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");
 
-    quest.validators = [];
-
     const updatedGame = validateQuest(game, seba.id, quest.id, {
       decision: "approved",
       note: "Approved from the inbox",

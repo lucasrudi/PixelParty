@@ -4,6 +4,11 @@ import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 import { deliverTelegramReadyMessages } from "@/lib/telegram-delivery";
+import {
+  getCookieValue,
+  getTelegramSession,
+  TELEGRAM_AUTH_COOKIE_NAME,
+} from "@/lib/telegram-auth";
 import { saveBrowserFile } from "@/lib/uploads";
 
 export async function POST(
@@ -13,11 +18,14 @@ export async function POST(
   try {
     const { gameId, questId } = await context.params;
     const formData = await request.formData();
-    const playerId = String(formData.get("playerId") ?? "");
+    const bodyPlayerId = String(formData.get("playerId") ?? "");
     const description = String(formData.get("description") ?? "");
     const kind = String(formData.get("kind") ?? "photo");
     const proofUrl = String(formData.get("proofUrl") ?? "");
     const file = formData.get("file");
+    const telegramSession = getTelegramSession(
+      getCookieValue(request.headers.get("cookie"), TELEGRAM_AUTH_COOKIE_NAME),
+    );
 
     let assetUrl = proofUrl.trim();
     let fileName: string | undefined;
@@ -31,9 +39,22 @@ export async function POST(
     const game = await updateGame(gameId, (current) => {
       if (current.accessMode === "simulator") {
         assertSimulatorEnabled();
+        return submitEvidence(current, bodyPlayerId, questId, {
+          description,
+          kind: kind === "video" ? "video" : "photo",
+          assetUrl,
+          fileName,
+        });
       }
 
-      return submitEvidence(current, playerId, questId, {
+      const sessionPlayer = current.players.find(
+        (p) => p.telegramUserId === telegramSession?.id,
+      );
+      if (!sessionPlayer) {
+        throw new Error("Authentication required to submit evidence.");
+      }
+
+      return submitEvidence(current, sessionPlayer.id, questId, {
         description,
         kind: kind === "video" ? "video" : "photo",
         assetUrl,

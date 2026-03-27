@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/route-response";
 import {
   fetchTelegramBotProfile,
+  fetchTelegramWebhookInfo,
   getTelegramBotUrl,
   getTelegramBotUsername,
   isTelegramBotConfigured,
@@ -23,7 +24,10 @@ export async function GET() {
       });
     }
 
-    const profile = await fetchTelegramBotProfile();
+    const [profile, webhook] = await Promise.all([
+      fetchTelegramBotProfile(),
+      fetchTelegramWebhookInfo(),
+    ]);
 
     return NextResponse.json({
       configured: true,
@@ -31,6 +35,7 @@ export async function GET() {
       botUrl:
         profile.username ? `https://t.me/${profile.username}` : botUrl,
       profile,
+      webhook,
     });
   } catch (error) {
     return jsonError(error, 502);

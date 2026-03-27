@@ -15,6 +15,17 @@ export interface TelegramBotProfile {
   supports_inline_queries?: boolean;
 }
 
+export interface TelegramWebhookInfo {
+  url?: string;
+  has_custom_certificate?: boolean;
+  pending_update_count?: number;
+  ip_address?: string;
+  last_error_date?: number;
+  last_error_message?: string;
+  last_synchronization_error_date?: number;
+  max_connections?: number;
+  allowed_updates?: string[];
+}
 interface TelegramUser {
   id?: number;
   is_bot?: boolean;
@@ -174,12 +185,21 @@ async function callTelegramApi<TResponse>(
     },
     method: "POST",
   });
-  const data = (await response.json()) as TelegramApiEnvelope<TResponse>;
+  let data: TelegramApiEnvelope<TResponse> | null = null;
 
-  if (!response.ok || !data.ok) {
-    throw new Error(data.description ?? `Telegram API call failed for ${method}.`);
+  try {
+    data = (await response.json()) as TelegramApiEnvelope<TResponse>;
+  } catch {
+    data = null;
   }
 
+  if (!response.ok || !data?.ok) {
+    const description =
+      data?.description ?? `Telegram API call failed for ${method}.`;
+    throw new Error(
+      `Telegram API ${method} failed with status ${response.status}: ${description}`,
+    );
+  }
   return data.result as TResponse;
 }
 
@@ -199,6 +219,29 @@ export async function fetchTelegramBotProfile(
 
   if (!response.ok || !data.ok || !data.result) {
     throw new Error(data.description ?? "Could not reach the Telegram Bot API.");
+  }
+
+  return data.result;
+}
+
+export async function fetchTelegramWebhookInfo(
+  env: Environment = process.env,
+): Promise<TelegramWebhookInfo> {
+  const token = getTelegramBotToken(env);
+
+  if (!token) {
+    throw new Error("TELEGRAM_BOT_TOKEN is not configured.");
+  }
+
+  const response = await fetch(`${getTelegramApiBase(token)}/getWebhookInfo`, {
+    cache: "no-store",
+  });
+  const data = (await response.json()) as TelegramApiEnvelope<TelegramWebhookInfo>;
+
+  if (!response.ok || !data.ok || !data.result) {
+    throw new Error(
+      data.description ?? "Could not reach Telegram webhook diagnostics.",
+    );
   }
 
   return data.result;

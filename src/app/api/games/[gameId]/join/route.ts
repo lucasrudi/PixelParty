@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { joinGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
+import { logServerWarning } from "@/lib/server-log";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 import { notifyPlayerOfLobbyLink } from "@/lib/telegram";
@@ -27,7 +28,13 @@ export async function POST(
     const joinedPlayer = game.players.find((player) => player.id === joinedPlayerId);
 
     if (game.accessMode === "telegram" && joinedPlayer) {
-      await notifyPlayerOfLobbyLink(game, joinedPlayer, "joined").catch(() => undefined);
+      await notifyPlayerOfLobbyLink(game, joinedPlayer, "joined").catch((error) =>
+        logServerWarning("telegram.lobby-link", error, {
+          event: "joined",
+          gameId: game.id,
+          playerId: joinedPlayer.id,
+        }),
+      );
     }
 
     return NextResponse.json({

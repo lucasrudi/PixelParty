@@ -22,6 +22,22 @@ function buildLobbyGame() {
   return game;
 }
 
+function buildInsufficientLobbyGame() {
+  const game = createGame({
+    title: "Host Controls",
+    groomName: "Tincho",
+    hostName: "Fede",
+    telegramHandle: "@fede",
+    startDate: "2026-03-27",
+    endDate: "2026-03-30",
+    accessMode: "telegram",
+  });
+
+  joinGame(game, { name: "Mauri", telegramHandle: "@mauri" });
+
+  return game;
+}
+
 describe("GameClient host controls", () => {
   it("starts a lobby game from the host controls", async () => {
     const user = userEvent.setup();
@@ -45,6 +61,21 @@ describe("GameClient host controls", () => {
     });
 
     expect(mockRouter.refresh).toHaveBeenCalled();
+  });
+
+  it("shows the minimum player requirement next to the start button", () => {
+    const game = buildInsufficientLobbyGame();
+    const host = game.players.find((player) => player.id === game.hostPlayerId)!;
+
+    render(<GameClient game={game} currentPlayer={host} />);
+
+    expect(
+      screen.getByRole("button", { name: /start game and trigger day 1/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(/need at least 3 players to start\./i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/1 more player needs to join\./i)).toBeInTheDocument();
   });
 
   it("advances the day and can end the game early for the host", async () => {

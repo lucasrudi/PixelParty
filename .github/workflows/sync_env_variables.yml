@@ -74,7 +74,7 @@ jobs:
             }
           }
 
-          await upsert("TELEGRAM_BOT_TOKEN", process.env.TELEGRAM_BOT_TOKEN, "secret");
+          await upsert("TELEGRAM_BOT_TOKEN", process.env.TELEGRAM_BOT_TOKEN, "sensitive");
           await upsert("TELEGRAM_BOT_USERNAME", process.env.TELEGRAM_BOT_USERNAME, "plain");
           await upsert(
             "NEXT_PUBLIC_TELEGRAM_BOT_USERNAME",
@@ -84,12 +84,12 @@ jobs:
           await upsert(
             "TELEGRAM_WEBHOOK_SECRET_TOKEN",
             process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN,
-            "secret",
+            "sensitive",
           );
           await upsert(
             "TELEGRAM_BINDING_ENCRYPTION_KEY",
             process.env.TELEGRAM_BINDING_ENCRYPTION_KEY,
-            "secret",
+            "sensitive",
           );
           await upsert("APP_URL", process.env.APP_URL, "plain");
           await upsert("NEXT_PUBLIC_APP_URL", process.env.APP_URL, "plain");

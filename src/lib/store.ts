@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import { UserFacingError } from "@/lib/errors";
 import path from "path";
 import postgres, { type Sql } from "postgres";
 import { normalizeTelegramHandle } from "@/lib/game-engine";
@@ -399,7 +400,7 @@ export async function updateGame(
       const game = rows[0] ? hydrateGame(rows[0].payload) : undefined;
 
       if (!game) {
-        throw new Error("Game not found.");
+        throw new UserFacingError("Game not found.");
       }
 
       const updatedGame = updater(structuredClone(game));
@@ -422,7 +423,7 @@ export async function updateGame(
     const game = store.games[gameId];
 
     if (!game) {
-      throw new Error("Game not found.");
+      throw new UserFacingError("Game not found.");
     }
 
     store.games[gameId] = updater(structuredClone(game));
@@ -442,7 +443,7 @@ export async function deleteGame(gameId: string) {
     `;
 
     if (rows.length === 0) {
-      throw new Error("Game not found.");
+      throw new UserFacingError("Game not found.");
     }
 
     return;
@@ -452,7 +453,7 @@ export async function deleteGame(gameId: string) {
     const store = await readFilesystemStore();
 
     if (!store.games[gameId]) {
-      throw new Error("Game not found.");
+      throw new UserFacingError("Game not found.");
     }
 
     delete store.games[gameId];

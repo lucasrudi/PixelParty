@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { UserFacingError } from "@/lib/errors";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
@@ -35,7 +36,7 @@ export async function POST(
         (p) => p.telegramUserId === telegramSession?.id,
       );
       if (!sessionPlayer) {
-        throw new Error("Authentication required to validate a quest.");
+        throw new UserFacingError("Authentication required to validate a quest.");
       }
 
       return validateQuest(current, sessionPlayer.id, questId, {

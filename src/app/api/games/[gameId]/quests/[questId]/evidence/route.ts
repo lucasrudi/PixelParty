@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { submitEvidence } from "@/lib/game-engine";
+import { UserFacingError } from "@/lib/errors";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
@@ -33,13 +34,13 @@ export async function POST(
     );
 
     if (!isEvidenceKind(kind)) {
-      throw new Error(
+      throw new UserFacingError(
         `Evidence type must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
       );
     }
 
     if (description.length > MAX_EVIDENCE_DESCRIPTION_LENGTH) {
-      throw new Error(
+      throw new UserFacingError(
         `Evidence descriptions must be ${MAX_EVIDENCE_DESCRIPTION_LENGTH} characters or fewer.`,
       );
     }
@@ -68,7 +69,7 @@ export async function POST(
         (p) => p.telegramUserId === telegramSession?.id,
       );
       if (!sessionPlayer) {
-        throw new Error("Authentication required to submit evidence.");
+        throw new UserFacingError("Authentication required to submit evidence.");
       }
 
       return submitEvidence(current, sessionPlayer.id, questId, {

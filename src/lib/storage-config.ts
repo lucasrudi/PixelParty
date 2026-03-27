@@ -1,3 +1,5 @@
+import { UserFacingError } from "@/lib/errors";
+
 export type GameStorageDriver = "filesystem" | "postgres";
 export type UploadStorageDriver = "filesystem" | "blob";
 
@@ -77,7 +79,7 @@ export function isSimulatorEnabled(env: Environment = process.env) {
 
 export function assertSimulatorEnabled(env: Environment = process.env) {
   if (!isSimulatorEnabled(env)) {
-    throw new Error("The local simulator is disabled in this deployment.");
+    throw new UserFacingError("The local simulator is disabled in this deployment.");
   }
 }
 

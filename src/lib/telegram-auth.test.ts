@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTelegramAuthRedirect,
+  clearTelegramCookieOptions,
   createTelegramOauthCookie,
   createTelegramOauthState,
   createTelegramSessionCookie,
+  getTelegramOauthCookieOptions,
   getTelegramHandleFromSession,
+  getTelegramSessionCookieOptions,
   getTelegramOauthState,
   getTelegramSession,
   isTelegramLoginEnabled,
@@ -66,5 +69,27 @@ describe("telegram auth helpers", () => {
     expect(buildTelegramAuthRedirect("/join/ABC123", "Try again")).toBe(
       "/join/ABC123?telegramAuthError=Try+again",
     );
+  });
+
+  it("uses secure cookies by default, even outside production", () => {
+    expect(getTelegramSessionCookieOptions({ NODE_ENV: "development" }).secure).toBe(
+      true,
+    );
+    expect(getTelegramOauthCookieOptions({ NODE_ENV: "test" }).secure).toBe(true);
+    expect(clearTelegramCookieOptions({ NODE_ENV: "development" }).secure).toBe(
+      true,
+    );
+  });
+
+  it("allows insecure cookies only when explicitly requested", () => {
+    const env = {
+      ...ENV,
+      INSECURE_COOKIES: "true",
+      NODE_ENV: "development",
+    };
+
+    expect(getTelegramSessionCookieOptions(env).secure).toBe(false);
+    expect(getTelegramOauthCookieOptions(env).secure).toBe(false);
+    expect(clearTelegramCookieOptions(env).secure).toBe(false);
   });
 });

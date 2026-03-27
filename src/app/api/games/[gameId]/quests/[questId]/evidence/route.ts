@@ -9,6 +9,11 @@ import {
   getTelegramSession,
   TELEGRAM_AUTH_COOKIE_NAME,
 } from "@/lib/telegram-auth";
+import {
+  EVIDENCE_KINDS,
+  isEvidenceKind,
+  MAX_EVIDENCE_DESCRIPTION_LENGTH,
+} from "@/lib/types";
 import { saveBrowserFile } from "@/lib/uploads";
 
 export async function POST(
@@ -19,13 +24,25 @@ export async function POST(
     const { gameId, questId } = await context.params;
     const formData = await request.formData();
     const bodyPlayerId = String(formData.get("playerId") ?? "");
-    const description = String(formData.get("description") ?? "");
+    const description = String(formData.get("description") ?? "").trim();
     const kind = String(formData.get("kind") ?? "photo");
     const proofUrl = String(formData.get("proofUrl") ?? "");
     const file = formData.get("file");
     const telegramSession = getTelegramSession(
       getCookieValue(request.headers.get("cookie"), TELEGRAM_AUTH_COOKIE_NAME),
     );
+
+    if (!isEvidenceKind(kind)) {
+      throw new Error(
+        `Evidence type must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
+      );
+    }
+
+    if (description.length > MAX_EVIDENCE_DESCRIPTION_LENGTH) {
+      throw new Error(
+        `Evidence descriptions must be ${MAX_EVIDENCE_DESCRIPTION_LENGTH} characters or fewer.`,
+      );
+    }
 
     let assetUrl = proofUrl.trim();
     let fileName: string | undefined;
@@ -56,7 +73,7 @@ export async function POST(
 
       return submitEvidence(current, sessionPlayer.id, questId, {
         description,
-        kind: kind === "video" ? "video" : "photo",
+        kind,
         assetUrl,
         fileName,
       });

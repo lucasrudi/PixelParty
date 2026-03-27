@@ -32,6 +32,16 @@ function offsetDate(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function getSecureRandomIndex(length: number) {
+  if (length <= 1) {
+    return 0;
+  }
+
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return values[0]! % length;
+}
+
 function nextSimulatorPlayerName(existingNames: string[]) {
   const usedNames = new Set(existingNames.map((name) => name.toLowerCase()));
   const availableNames = SIMULATOR_NAMES.filter(
@@ -39,7 +49,7 @@ function nextSimulatorPlayerName(existingNames: string[]) {
   );
 
   if (availableNames.length > 0) {
-    return availableNames[Math.floor(Math.random() * availableNames.length)];
+    return availableNames[getSecureRandomIndex(availableNames.length)];
   }
 
   let suffix = existingNames.length + 1;

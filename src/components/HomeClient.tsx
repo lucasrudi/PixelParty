@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { listStoryBeats } from "@/lib/story";
+import type { TelegramAuthSession } from "@/lib/telegram-auth";
 import styles from "./home-client.module.css";
 
 function offsetDate(days: number) {
@@ -27,12 +28,19 @@ const DEFAULT_HOST_NAME = "Fede";
 
 export function HomeClient({
   showSimulatorLink,
+  telegramAuth,
+  telegramLoginEnabled,
 }: {
   showSimulatorLink: boolean;
+  telegramAuth: TelegramAuthSession | null;
+  telegramLoginEnabled: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const linkedHandle = telegramAuth?.username ? `@${telegramAuth.username}` : "";
+  const telegramAuthError = searchParams.get("telegramAuthError") ?? "";
 
   async function handleCreate(formData: FormData) {
     setError("");
@@ -43,7 +51,8 @@ export function HomeClient({
       startDate: String(formData.get("startDate") ?? ""),
       endDate: String(formData.get("endDate") ?? ""),
       hostName: String(formData.get("hostName") ?? "").trim() || DEFAULT_HOST_NAME,
-      telegramHandle: String(formData.get("telegramHandle") ?? ""),
+      telegramHandle:
+        String(formData.get("telegramHandle") ?? "").trim() || linkedHandle,
       accessMode: "telegram" as const,
       enabledTags: [
         formData.get("tag_alcohol") ? "alcohol" : null,
@@ -96,7 +105,7 @@ export function HomeClient({
             ) : null}
           </div>
           <div className={styles.telegramNote}>
-            <strong>Telegram note.</strong> This MVP stores Telegram handles and produces Telegram-ready narrator messages. To deliver real bot DMs in production, each player still needs to start the bot once so their chat ID can be linked to the handle.
+            <strong>Telegram note.</strong> This MVP still renders narrator messages in-app, but you can now pre-link a real Telegram account from the website. That verified login is what removes the extra bind step later when we turn on bot DMs.
           </div>
         </div>
         <div className={styles.sceneCard}>
@@ -180,6 +189,31 @@ export function HomeClient({
             void handleCreate(new FormData(event.currentTarget));
           }}
         >
+          {telegramLoginEnabled ? (
+            <div className={styles.identityCard}>
+              <strong>
+                {telegramAuth ? "Telegram account linked" : "Link Telegram first"}
+              </strong>
+              <p>
+                {telegramAuth
+                  ? `Signed in as ${linkedHandle || telegramAuth.name}. This verified account will be used for the host identity and future bot DM permission.`
+                  : "Sign in with Telegram here to link the host to a verified Telegram account and request direct-message access without sending people back to the bot first."}
+              </p>
+              <div className={styles.identityActions}>
+                <a
+                  href={
+                    telegramAuth
+                      ? "/api/telegram/logout?returnTo=%2F%23create"
+                      : "/api/telegram/login?returnTo=%2F%23create"
+                  }
+                  className={styles.secondaryAction}
+                >
+                  {telegramAuth ? "Switch Telegram Account" : "Continue With Telegram"}
+                </a>
+              </div>
+              {telegramAuthError ? <p className={styles.error}>{telegramAuthError}</p> : null}
+            </div>
+          ) : null}
           <label>
             Game title
             <input name="title" placeholder={DEFAULT_GAME_TITLE} />
@@ -193,9 +227,20 @@ export function HomeClient({
             <input name="hostName" placeholder={DEFAULT_HOST_NAME} />
           </label>
           <label>
-            Host Telegram
-            <input name="telegramHandle" placeholder="@fede" required />
+            Host Telegram handle
+            <input
+              name="telegramHandle"
+              placeholder="@fede"
+              defaultValue={linkedHandle}
+              readOnly={Boolean(linkedHandle)}
+              required={!telegramAuth}
+            />
           </label>
+          {telegramAuth && !linkedHandle ? (
+            <p className={styles.fieldHint}>
+              Telegram is linked. A public `@username` is optional here and only used for display.
+            </p>
+          ) : null}
           <div className={styles.dateRow}>
             <label>
               Start date

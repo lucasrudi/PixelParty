@@ -68,6 +68,21 @@ function sanitizeTelegramHandle(value?: string) {
   return normalized ? `@${normalized}` : "";
 }
 
+function sanitizeTelegramUserId(value?: string) {
+  const normalized = value?.trim() ?? "";
+  return normalized || "";
+}
+
+function hasTelegramIdentity(input: {
+  telegramHandle?: string;
+  telegramUserId?: string;
+}) {
+  return Boolean(
+    sanitizeTelegramHandle(input.telegramHandle) ||
+      sanitizeTelegramUserId(input.telegramUserId),
+  );
+}
+
 function buildTraits(): Record<PlayerTrait, number> {
   return {
     chaos: 1,
@@ -111,13 +126,19 @@ function selectAvatar(usedAvatars: string[]) {
 function createPlayer(
   name: string,
   telegramHandle: string,
+  telegramUserId: string | undefined,
+  telegramVerifiedAt: string | undefined,
   usedAvatars: string[],
   isHost: boolean,
 ): Player {
+  const sanitizedTelegramUserId = sanitizeTelegramUserId(telegramUserId);
+
   return {
     id: createId("player"),
     name: toTitleCase(name.trim()),
     telegramHandle: sanitizeTelegramHandle(telegramHandle),
+    telegramUserId: sanitizedTelegramUserId || undefined,
+    telegramVerifiedAt,
     joinedAt: now(),
     points: 0,
     avatarKey: selectAvatar(usedAvatars),
@@ -275,15 +296,17 @@ export function createGame(input: CreateGameInput): Game {
 
   if (
     input.accessMode === "telegram" &&
-    !sanitizeTelegramHandle(input.telegramHandle)
+    !hasTelegramIdentity(input)
   ) {
-    throw new Error("The host needs a Telegram handle for the web game.");
+    throw new Error("The host needs a Telegram login or handle for the web game.");
   }
 
   const totalDays = assertDateRange(input.startDate, input.endDate);
   const host = createPlayer(
     input.hostName,
     input.telegramHandle ?? "",
+    input.telegramUserId,
+    input.telegramVerifiedAt,
     [],
     true,
   );
@@ -337,20 +360,30 @@ export function joinGame(game: Game, input: JoinGameInput) {
 
   if (
     game.accessMode === "telegram" &&
-    !sanitizeTelegramHandle(input.telegramHandle)
+    !hasTelegramIdentity(input)
   ) {
-    throw new Error("A Telegram handle is required for the web game.");
+    throw new Error("A Telegram login or handle is required for the web game.");
   }
 
   const normalizedName = input.name.trim().toLowerCase();
+  const sanitizedTelegramUserId = sanitizeTelegramUserId(input.telegramUserId);
 
   if (game.players.some((player) => player.name.toLowerCase() === normalizedName)) {
     throw new Error("That player name is already in the party.");
   }
 
+  if (
+    sanitizedTelegramUserId &&
+    game.players.some((player) => player.telegramUserId === sanitizedTelegramUserId)
+  ) {
+    throw new Error("That Telegram account is already linked to this party.");
+  }
+
   const player = createPlayer(
     input.name,
     input.telegramHandle ?? "",
+    input.telegramUserId,
+    input.telegramVerifiedAt,
     game.players.map((member) => member.avatarKey),
     false,
   );

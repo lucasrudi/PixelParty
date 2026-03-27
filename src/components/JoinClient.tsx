@@ -1,16 +1,28 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Game } from "@/lib/types";
+import type { TelegramAuthSession } from "@/lib/telegram-auth";
+import type { Game } from "@/lib/types";
 import styles from "./join-client.module.css";
 
 const DEFAULT_PLAYER_NAME = "Luqui";
 
-export function JoinClient({ game }: { game: Game }) {
+export function JoinClient({
+  game,
+  telegramAuth,
+  telegramLoginEnabled,
+}: {
+  game: Game;
+  telegramAuth: TelegramAuthSession | null;
+  telegramLoginEnabled: boolean;
+}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const linkedHandle = telegramAuth?.username ? `@${telegramAuth.username}` : "";
+  const telegramAuthError = searchParams.get("telegramAuthError") ?? "";
 
   async function handleJoin(formData: FormData) {
     setError("");
@@ -22,7 +34,8 @@ export function JoinClient({ game }: { game: Game }) {
       },
       body: JSON.stringify({
         name: String(formData.get("name") ?? "").trim() || DEFAULT_PLAYER_NAME,
-        telegramHandle: String(formData.get("telegramHandle") ?? ""),
+        telegramHandle:
+          String(formData.get("telegramHandle") ?? "").trim() || linkedHandle,
       }),
     });
 
@@ -57,6 +70,29 @@ export function JoinClient({ game }: { game: Game }) {
             });
           }}
         >
+          {game.accessMode === "telegram" && telegramLoginEnabled ? (
+            <div className={styles.identityCard}>
+              <strong>
+                {telegramAuth ? "Telegram account linked" : "Link Telegram first"}
+              </strong>
+              <p>
+                {telegramAuth
+                  ? `Signed in as ${linkedHandle || telegramAuth.name}. This verified Telegram account will be attached to your player when you join.`
+                  : "Sign in with Telegram here to attach a verified Telegram identity and request bot DM access before you enter the lobby."}
+              </p>
+              <a
+                href={
+                  telegramAuth
+                    ? `/api/telegram/logout?returnTo=${encodeURIComponent(`/join/${game.inviteCode}`)}`
+                    : `/api/telegram/login?returnTo=${encodeURIComponent(`/join/${game.inviteCode}`)}`
+                }
+                className={styles.identityAction}
+              >
+                {telegramAuth ? "Switch Telegram Account" : "Continue With Telegram"}
+              </a>
+              {telegramAuthError ? <p className={styles.error}>{telegramAuthError}</p> : null}
+            </div>
+          ) : null}
           <label>
             Your name
             <input name="name" placeholder={DEFAULT_PLAYER_NAME} />
@@ -64,8 +100,20 @@ export function JoinClient({ game }: { game: Game }) {
           {game.accessMode === "telegram" ? (
             <label>
               Telegram handle
-              <input name="telegramHandle" placeholder="@luqui" required />
+              <input
+                name="telegramHandle"
+                placeholder="@luqui"
+                defaultValue={linkedHandle}
+                readOnly={Boolean(linkedHandle)}
+                required={!telegramAuth}
+              />
             </label>
+          ) : null}
+          {game.accessMode === "telegram" && telegramAuth && !linkedHandle ? (
+            <p className={styles.fieldHint}>
+              Telegram is linked already. Add a public `@username` only if you want it shown in
+              the roster.
+            </p>
           ) : null}
           {error ? <p className={styles.error}>{error}</p> : null}
           <button type="submit" disabled={isPending || game.status !== "lobby"}>

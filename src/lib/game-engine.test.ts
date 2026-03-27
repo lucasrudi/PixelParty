@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resetGame, validateQuest } from "@/lib/game-engine";
+import { createGame, joinGame, resetGame, validateQuest } from "@/lib/game-engine";
 import {
   buildStartedSimulatorGame,
   buildStartedTelegramGame,
@@ -7,6 +7,46 @@ import {
 } from "@/test/fixtures";
 
 describe("game validation flow", () => {
+  it("allows a telegram game host with a verified Telegram user id and no handle", () => {
+    const game = createGame({
+      title: "Weekend of Bad Decisions",
+      groomName: "Tincho",
+      hostName: "Fede",
+      startDate: "2026-03-27",
+      endDate: "2026-03-30",
+      accessMode: "telegram",
+      telegramUserId: "123456789",
+      telegramVerifiedAt: "2026-03-27T10:00:00.000Z",
+    });
+
+    expect(game.players[0]?.telegramUserId).toBe("123456789");
+    expect(game.players[0]?.telegramHandle).toBe("");
+  });
+
+  it("blocks two players from joining with the same verified Telegram account", () => {
+    const game = createGame({
+      title: "Weekend of Bad Decisions",
+      groomName: "Tincho",
+      hostName: "Fede",
+      telegramHandle: "@fede",
+      startDate: "2026-03-27",
+      endDate: "2026-03-30",
+      accessMode: "telegram",
+    });
+
+    joinGame(game, {
+      name: "Luqui",
+      telegramUserId: "123456789",
+    });
+
+    expect(() =>
+      joinGame(game, {
+        name: "Seba",
+        telegramUserId: "123456789",
+      }),
+    ).toThrow("Telegram account is already linked");
+  });
+
   it("always includes the simulator host in the validator pool", () => {
     const { game, host, mauri } = buildStartedSimulatorGame();
     const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");

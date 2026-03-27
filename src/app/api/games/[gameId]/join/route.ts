@@ -3,6 +3,12 @@ import { joinGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
+import {
+  getCookieValue,
+  getTelegramHandleFromSession,
+  getTelegramSession,
+  TELEGRAM_AUTH_COOKIE_NAME,
+} from "@/lib/telegram-auth";
 import { JoinGameInput } from "@/lib/types";
 
 export async function POST(
@@ -12,6 +18,16 @@ export async function POST(
   try {
     const { gameId } = await context.params;
     const body = (await request.json()) as JoinGameInput;
+    const telegramSession = getTelegramSession(
+      getCookieValue(request.headers.get("cookie"), TELEGRAM_AUTH_COOKIE_NAME),
+    );
+    const effectiveBody: JoinGameInput = {
+      ...body,
+      telegramHandle:
+        body.telegramHandle?.trim() || getTelegramHandleFromSession(telegramSession),
+      telegramUserId: telegramSession?.id ?? body.telegramUserId,
+      telegramVerifiedAt: telegramSession?.verifiedAt ?? body.telegramVerifiedAt,
+    };
     let joinedPlayerId = "";
 
     const game = await updateGame(gameId, (current) => {
@@ -19,7 +35,7 @@ export async function POST(
         assertSimulatorEnabled();
       }
 
-      const result = joinGame(current, body);
+      const result = joinGame(current, effectiveBody);
       joinedPlayerId = result.player.id;
       return result.game;
     });

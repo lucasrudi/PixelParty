@@ -6,7 +6,7 @@ Pixel-art multiplayer bachelor-party WebApp inspired by the original `tincho-en-
 
 - A lobby flow where one host creates a game instance, sets the trip start and end dates, and gets a public invite link
 - Join flow for friends using the public link
-- Telegram-ready identity flow using Telegram handles for the main WebApp
+- Telegram-ready identity flow with Telegram website login plus a manual handle fallback
 - A daily narrator loop that:
   - sends context for the current scene
   - asks each player what they are doing
@@ -24,11 +24,12 @@ This project is Telegram-ready, not Telegram-delivered.
 
 Today the app:
 
-- stores Telegram handles for the main web flow
+- can verify a Telegram account from the website and remember that linked identity in the browser
+- still stores Telegram handles for display and backward compatibility
 - renders narrator messages in a Telegram-ready format inside the app
 - does not yet call the Telegram Bot API directly
 
-That means the current app does not require a bot token, webhook, or polling worker to run. Players still need to use their real Telegram handles consistently, and if you want a Telegram bot to open the Web App you configure that around the app, not inside the current codebase.
+That means the current app still does not require a bot token, webhook, or polling worker to run. Telegram Login reduces the extra bind friction by proving which Telegram account belongs to the current browser session and requesting DM permission up front, but real message delivery still needs a later Bot API integration.
 
 ### Local Telegram-ready setup
 
@@ -42,20 +43,28 @@ npm run dev
 ```
 
 2. Open [http://localhost:3000](http://localhost:3000).
-3. Create a game from `/` using the normal Telegram-ready form.
-4. Enter real-looking Telegram handles such as `@fede`, `@mauri`, and `@seba` when creating and joining players.
-5. Share the local invite link manually with anyone else testing on the same network, or just open the join page yourself in another browser session.
+3. If you only want the legacy fallback flow, create a game from `/` and enter Telegram handles such as `@fede`, `@mauri`, and `@seba` manually.
+4. If you want the new low-friction website login flow, create a bot in BotFather, enable **Bot Settings > Web Login**, and add `http://localhost:3000` or your HTTPS tunnel origin to the allowed URLs.
+5. Set the Telegram Login env vars locally:
+
+```bash
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_ID=123456789
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_SECRET=telegram_web_login_secret
+```
+
+6. Restart `npm run dev`, then use the `Continue With Telegram` button on `/` or `/join/...`.
+7. Share the local invite link manually with anyone else testing on the same network, or just open the join page yourself in another browser session.
 
 Optional local bot setup:
 
 1. Create a bot with BotFather.
-2. Ask testers to start the bot once in Telegram.
-3. If you want Telegram to open the local Web App, expose your local app through an HTTPS tunnel such as `ngrok`, `Cloudflare Tunnel`, or similar.
+2. If you want Telegram to open the local Web App, expose your local app through an HTTPS tunnel such as `ngrok`, `Cloudflare Tunnel`, or similar.
+3. Add that HTTPS tunnel origin to BotFather Web Login allowed URLs.
 4. Point the bot menu button or Web App button at that public HTTPS tunnel URL.
 
 Local environment notes:
 
-- no Telegram-specific environment variable is required today
+- Telegram login is optional; without the login env vars the manual-handle fallback still works
 - `.env.local` is only needed if you want to force a specific storage mode locally
 - the simulator can stay enabled locally with the default development behavior, or explicitly with `PIXELPARTY_ENABLE_SIMULATOR=true`
 
@@ -65,6 +74,8 @@ Example local `.env.local`:
 PIXELPARTY_GAME_STORAGE=filesystem
 PIXELPARTY_UPLOAD_STORAGE=filesystem
 PIXELPARTY_ENABLE_SIMULATOR=true
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_ID=123456789
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_SECRET=telegram_web_login_secret
 ```
 
 ### Production Telegram-ready setup
@@ -77,10 +88,13 @@ Use this when you want the normal web flow deployed for real players.
    - `BLOB_READ_WRITE_TOKEN` for uploaded evidence
 3. Keep the simulator disabled unless you explicitly want it:
    - `PIXELPARTY_ENABLE_SIMULATOR=false`
-4. Create a bot with BotFather if you want Telegram to be the entrypoint into the web app.
-5. Ask every player to start the bot once in Telegram.
-6. Point the bot menu button, deep link, or Web App button at your deployed HTTPS app URL.
-7. Require players to enter the same Telegram handle they use in Telegram when they join the non-simulator flow.
+4. Create a bot with BotFather and open **Bot Settings > Web Login**.
+5. Add your deployed origin and callback URL origin to the allowed URLs in BotFather.
+6. Set the Telegram Login credentials on the app:
+   - `PIXELPARTY_TELEGRAM_LOGIN_CLIENT_ID`
+   - `PIXELPARTY_TELEGRAM_LOGIN_CLIENT_SECRET`
+7. Use the website `Continue With Telegram` buttons on `/` and `/join/...` to pre-link players from the browser without sending them to the bot first.
+8. Optionally point the bot menu button, deep link, or Web App button at your deployed HTTPS app URL later if you want Telegram to become the entrypoint too.
 
 Example hosted configuration:
 
@@ -88,15 +102,18 @@ Example hosted configuration:
 POSTGRES_URL=postgres://user:password@host:5432/pixelparty
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx
 PIXELPARTY_ENABLE_SIMULATOR=false
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_ID=123456789
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_SECRET=telegram_web_login_secret
 ```
 
 Production behavior today:
 
-- the app itself still does not read a Telegram bot token
+- the app can verify Telegram identity and request bot DM permission from the website
+- the app still does not read a Telegram bot token
 - the app still does not register a Telegram webhook or run polling
-- the app still does not store Telegram chat IDs
+- the app now stores Telegram user IDs on linked players
 - the app still does not send real Telegram DMs
-- Telegram is currently used as identity context and optional app entrypoint, not as a live delivery channel
+- Telegram is now used as verified identity context and optional app entrypoint, but not yet as a live delivery channel
 
 ## Run Locally
 

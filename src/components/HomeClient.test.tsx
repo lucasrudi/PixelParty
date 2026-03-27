@@ -62,4 +62,48 @@ describe("HomeClient", () => {
     ).toHaveAttribute("href", "https://t.me/pixel_party_bot");
     expect(screen.getByText(/current bot: @pixel_party_bot/i)).toBeInTheDocument();
   });
+
+  it("looks up joined games by telegram handle and resumes the selected run", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          games: [
+            {
+              accessMode: "telegram",
+              currentDay: 2,
+              endDate: "2026-03-30",
+              gameId: "game_456",
+              hostName: "Fede",
+              joinedAt: "2026-03-27T00:00:00.000Z",
+              playerId: "player_456",
+              playerName: "Seba",
+              startDate: "2026-03-27",
+              status: "active",
+              title: "Weekend of Bad Decisions",
+              totalDays: 4,
+              updatedAt: "2026-03-28T00:00:00.000Z",
+            },
+          ],
+        }),
+      ),
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<HomeClient showSimulatorLink />);
+
+    await user.type(screen.getByRole("textbox", { name: /^telegram handle$/i }), "@seba");
+    await user.click(screen.getByRole("button", { name: /find my games/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith("/api/games?telegramHandle=%40seba");
+    });
+
+    expect(screen.getByText("Weekend of Bad Decisions")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /resume play/i }));
+
+    expect(mockRouter.push).toHaveBeenCalledWith("/game/game_456?player=player_456");
+  });
 });

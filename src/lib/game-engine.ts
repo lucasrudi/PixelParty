@@ -67,7 +67,7 @@ function toTitleCase(value: string) {
     .join(" ");
 }
 
-function sanitizeTelegramHandle(value?: string) {
+export function normalizeTelegramHandle(value?: string) {
   const normalized = value?.trim().replace(/^@/, "") ?? "";
   return normalized ? `@${normalized}` : "";
 }
@@ -121,7 +121,7 @@ function createPlayer(
   return {
     id: createId("player"),
     name: toTitleCase(name.trim()),
-    telegramHandle: sanitizeTelegramHandle(telegramHandle),
+    telegramHandle: normalizeTelegramHandle(telegramHandle),
     telegramBindingToken: createBindingToken(),
     joinedAt: now(),
     points: 0,
@@ -280,7 +280,7 @@ export function createGame(input: CreateGameInput): Game {
 
   if (
     input.accessMode === "telegram" &&
-    !sanitizeTelegramHandle(input.telegramHandle)
+    !normalizeTelegramHandle(input.telegramHandle)
   ) {
     throw new Error("The host needs a Telegram handle for the web game.");
   }
@@ -342,7 +342,7 @@ export function joinGame(game: Game, input: JoinGameInput) {
 
   if (
     game.accessMode === "telegram" &&
-    !sanitizeTelegramHandle(input.telegramHandle)
+    !normalizeTelegramHandle(input.telegramHandle)
   ) {
     throw new Error("A Telegram handle is required for the web game.");
   }
@@ -372,6 +372,34 @@ export function joinGame(game: Game, input: JoinGameInput) {
 
   game.updatedAt = now();
   return { game, player };
+}
+
+export function leaveGame(game: Game, playerId: string) {
+  const player = game.players.find((entry) => entry.id === playerId);
+
+  if (!player) {
+    throw new Error("Player not found.");
+  }
+
+  if (player.id === game.hostPlayerId) {
+    throw new Error("The host cannot leave the game. Delete the game instead.");
+  }
+
+  game.players = game.players.filter((entry) => entry.id !== playerId);
+  game.quests = game.quests.filter((quest) => quest.playerId !== playerId);
+  game.finaleCards = game.finaleCards.filter((card) => card.playerId !== playerId);
+
+  addMessages(game, [
+    createMessage(
+      "Party member left",
+      `${player.name} left the game and their active progress was cleared from the roster.`,
+      "all",
+      "timeline",
+    ),
+  ]);
+
+  game.updatedAt = now();
+  return game;
 }
 
 export function startGame(game: Game) {

@@ -99,4 +99,28 @@ describe("GameClient host controls", () => {
     );
     expect(screen.getByText(/invite copied/i)).toBeInTheDocument();
   });
+
+  it("lets a non-host player leave the game from the dashboard", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    const game = buildLobbyGame();
+    const seba = game.players.find((player) => player.name === "Seba")!;
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<GameClient game={game} currentPlayer={seba} />);
+
+    await user.click(screen.getByRole("button", { name: /leave game/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/games/${game.id}/players/${seba.id}`,
+        expect.objectContaining({
+          method: "DELETE",
+        }),
+      );
+    });
+
+    expect(mockRouter.push).toHaveBeenCalledWith("/");
+  });
 });

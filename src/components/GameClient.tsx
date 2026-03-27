@@ -174,6 +174,7 @@ export function GameClient({
   const activeBeat =
     journey[Math.max(game.currentDay - 1, 0)] ?? journey[journey.length - 1];
   const isHost = currentPlayer?.id === game.hostPlayerId;
+  const canLeaveGame = Boolean(currentPlayer && !isHost);
   const canManageGame = isHost || game.accessMode === "simulator";
   const finaleToken = game.status === "finished" ? `${game.id}:${game.updatedAt}` : null;
   const showFinaleCinematic =
@@ -969,6 +970,32 @@ export function GameClient({
           <h1>{game.title}</h1>
           <p>{activeBeat.narratorLead}</p>
           <div className={styles.heroActions}>
+            {canLeaveGame && currentPlayer ? (
+              <button
+                type="button"
+                className={styles.ghostButton}
+                disabled={isPending}
+                onClick={() => {
+                  if (!window.confirm("Leave this game and clear your player slot from the roster?")) {
+                    return;
+                  }
+
+                  startTransition(async () => {
+                    await runJsonAction(
+                      `/api/games/${game.id}/players/${currentPlayer.id}`,
+                      undefined,
+                      {
+                        method: "DELETE",
+                        redirectTo:
+                          game.accessMode === "simulator" ? "/simulator" : "/",
+                      },
+                    );
+                  });
+                }}
+              >
+                Leave game
+              </button>
+            ) : null}
             <button type="button" onClick={() => void handleCopyInvite()}>
               Copy invite link
             </button>

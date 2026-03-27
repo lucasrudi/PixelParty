@@ -20,6 +20,13 @@ export type QuestStatus =
 
 export type EvidenceKind = "photo" | "video";
 
+export const EVIDENCE_KINDS = ["photo", "video"] as const;
+export const MAX_EVIDENCE_DESCRIPTION_LENGTH = 500;
+
+export function isEvidenceKind(value: string): value is EvidenceKind {
+  return EVIDENCE_KINDS.includes(value as EvidenceKind);
+}
+
 export type MessageAudience = "all" | "player";
 
 export interface PlayerActivity {

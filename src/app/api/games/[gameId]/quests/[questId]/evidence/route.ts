@@ -4,6 +4,11 @@ import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 import { deliverTelegramReadyMessages } from "@/lib/telegram-delivery";
+import {
+  EVIDENCE_KINDS,
+  isEvidenceKind,
+  MAX_EVIDENCE_DESCRIPTION_LENGTH,
+} from "@/lib/types";
 import { saveBrowserFile } from "@/lib/uploads";
 
 export async function POST(
@@ -14,10 +19,22 @@ export async function POST(
     const { gameId, questId } = await context.params;
     const formData = await request.formData();
     const playerId = String(formData.get("playerId") ?? "");
-    const description = String(formData.get("description") ?? "");
+    const description = String(formData.get("description") ?? "").trim();
     const kind = String(formData.get("kind") ?? "photo");
     const proofUrl = String(formData.get("proofUrl") ?? "");
     const file = formData.get("file");
+
+    if (!isEvidenceKind(kind)) {
+      throw new Error(
+        `Evidence type must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
+      );
+    }
+
+    if (description.length > MAX_EVIDENCE_DESCRIPTION_LENGTH) {
+      throw new Error(
+        `Evidence descriptions must be ${MAX_EVIDENCE_DESCRIPTION_LENGTH} characters or fewer.`,
+      );
+    }
 
     let assetUrl = proofUrl.trim();
     let fileName: string | undefined;
@@ -35,7 +52,7 @@ export async function POST(
 
       return submitEvidence(current, playerId, questId, {
         description,
-        kind: kind === "video" ? "video" : "photo",
+        kind,
         assetUrl,
         fileName,
       });

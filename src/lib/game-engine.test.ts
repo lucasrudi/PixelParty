@@ -4,8 +4,10 @@ import {
   joinGame,
   leaveGame,
   resetGame,
+  submitEvidence,
   validateQuest,
 } from "@/lib/game-engine";
+import { MAX_EVIDENCE_DESCRIPTION_LENGTH } from "@/lib/types";
 import {
   buildStartedSimulatorGame,
   buildStartedTelegramGame,
@@ -58,6 +60,20 @@ describe("game validation flow", () => {
     const quest = submitPendingEvidence(game, mauri.id, "Mauri proof");
 
     expect(quest.validators).toContain(host.id);
+  });
+
+  it("generates uppercase invite codes from cryptographic randomness", () => {
+    const game = createGame({
+      title: "Weekend of Bad Decisions",
+      groomName: "Tincho",
+      hostName: "Fede",
+      telegramHandle: "@fede",
+      startDate: "2026-03-27",
+      endDate: "2026-03-30",
+      accessMode: "telegram",
+    });
+
+    expect(game.inviteCode).toMatch(/^[A-Z0-9]{6}$/);
   });
 
   it("awards points and posts a narrator broadcast when evidence is accepted", () => {
@@ -124,6 +140,36 @@ describe("game validation flow", () => {
         note: "Self-approved",
       }),
     ).toThrow("cannot validate your own quest");
+  });
+
+  it("rejects unsupported evidence kinds", () => {
+    const { game, mauri } = buildStartedSimulatorGame();
+    const quest = game.quests.find(
+      (entry) => entry.playerId === mauri.id && entry.dayNumber === game.currentDay,
+    )!;
+
+    expect(() =>
+      submitEvidence(game, mauri.id, quest.id, {
+        description: "Suspicious payload",
+        kind: "audio" as never,
+        assetUrl: "https://example.com/proof.mp3",
+      }),
+    ).toThrow("Evidence type must be one of: photo, video.");
+  });
+
+  it("caps evidence descriptions at 500 characters", () => {
+    const { game, mauri } = buildStartedSimulatorGame();
+    const quest = game.quests.find(
+      (entry) => entry.playerId === mauri.id && entry.dayNumber === game.currentDay,
+    )!;
+
+    expect(() =>
+      submitEvidence(game, mauri.id, quest.id, {
+        description: "x".repeat(MAX_EVIDENCE_DESCRIPTION_LENGTH + 1),
+        kind: "photo",
+        assetUrl: "https://example.com/proof.jpg",
+      }),
+    ).toThrow("Evidence descriptions must be 500 characters or fewer.");
   });
 
   it("lets a non-host player leave and removes their active progress", () => {

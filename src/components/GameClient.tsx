@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { buildActivityPrompt, listStoryBeats } from "@/lib/story";
-import { Game, Player, Quest } from "@/lib/types";
+import {
+  MAX_EVIDENCE_DESCRIPTION_LENGTH,
+  type Game,
+  type Player,
+  type Quest,
+} from "@/lib/types";
 import styles from "./game-client.module.css";
 
 const SIMULATOR_NAMES = [
@@ -66,6 +71,16 @@ function recentMessages(game: Game, currentPlayer?: Player) {
     .slice(0, 12);
 }
 
+function getSecureRandomIndex(length: number) {
+  if (length <= 1) {
+    return 0;
+  }
+
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return values[0]! % length;
+}
+
 function nextSimulatorPlayerName(players: Player[]) {
   const usedNames = new Set(players.map((player) => player.name.toLowerCase()));
   const availableNames = SIMULATOR_NAMES.filter(
@@ -73,7 +88,7 @@ function nextSimulatorPlayerName(players: Player[]) {
   );
 
   if (availableNames.length > 0) {
-    return availableNames[Math.floor(Math.random() * availableNames.length)];
+    return availableNames[getSecureRandomIndex(availableNames.length)];
   }
 
   let suffix = players.length + 1;
@@ -548,6 +563,7 @@ export function GameClient({
               <input
                 name="description"
                 defaultValue={quest.evidence?.description ?? ""}
+                maxLength={MAX_EVIDENCE_DESCRIPTION_LENGTH}
                 placeholder="What are validators looking at?"
                 required
               />

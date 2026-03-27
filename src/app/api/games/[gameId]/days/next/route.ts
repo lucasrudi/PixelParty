@@ -3,7 +3,7 @@ import { advanceDay } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
-import { deliverTelegramReadyMessages } from "@/lib/telegram-delivery";
+import { notifyPlayersOfCurrentDay } from "@/lib/telegram";
 
 export async function POST(
   _request: Request,
@@ -18,7 +18,9 @@ export async function POST(
 
       return advanceDay(current);
     });
-    await deliverTelegramReadyMessages(game.id);
+
+    await notifyPlayersOfCurrentDay(game.id);
+
     return NextResponse.json({
       ok: true,
       gameId: game.id,

@@ -3,6 +3,7 @@ import { joinGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
+import { notifyPlayerOfLobbyLink } from "@/lib/telegram";
 import { JoinGameInput } from "@/lib/types";
 
 export async function POST(
@@ -23,6 +24,11 @@ export async function POST(
       joinedPlayerId = result.player.id;
       return result.game;
     });
+    const joinedPlayer = game.players.find((player) => player.id === joinedPlayerId);
+
+    if (game.accessMode === "telegram" && joinedPlayer) {
+      await notifyPlayerOfLobbyLink(game, joinedPlayer, "joined").catch(() => undefined);
+    }
 
     return NextResponse.json({
       gameId: game.id,

@@ -3,6 +3,7 @@ import { createGame, normalizeTelegramHandle } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { listGamesForTelegramHandle, saveGame } from "@/lib/store";
+import { notifyPlayerOfLobbyLink } from "@/lib/telegram";
 import { CreateGameInput } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,11 @@ export async function POST(request: Request) {
 
     const game = createGame(body);
     await saveGame(game);
+    const host = game.players.find((player) => player.id === game.hostPlayerId);
+
+    if (game.accessMode === "telegram" && host) {
+      await notifyPlayerOfLobbyLink(game, host, "created").catch(() => undefined);
+    }
 
     return NextResponse.json({
       gameId: game.id,

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, Silkscreen } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const bodyFont = Chakra_Petch({
@@ -27,7 +28,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${bodyFont.variable} ${displayFont.variable}`}>
-      <body>{children}</body>
+      <body>
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
+        {children}
+      </body>
     </html>
   );
 }

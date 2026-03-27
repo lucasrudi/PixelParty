@@ -50,4 +50,48 @@ describe("JoinClient", () => {
       );
     });
   });
+
+  it("includes the Telegram WebApp chat id when available", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ playerId: "player_joined" })),
+    );
+    const game = createGame({
+      title: "Weekend of Bad Decisions",
+      groomName: "Tincho",
+      hostName: "Fede",
+      telegramHandle: "@fede",
+      startDate: "2026-03-27",
+      endDate: "2026-03-30",
+      accessMode: "telegram",
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    Object.assign(window, {
+      Telegram: {
+        WebApp: {
+          initDataUnsafe: {
+            user: {
+              id: 2002,
+            },
+          },
+        },
+      },
+    });
+
+    render(<JoinClient game={game} />);
+
+    await user.type(screen.getByLabelText(/your name/i), "Luqui");
+    await user.type(screen.getByLabelText(/telegram handle/i), "@luqui");
+    await user.click(screen.getByRole("button", { name: /join the party/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    const [, request] = fetchMock.mock.calls[0] ?? [];
+    const payload = JSON.parse(String(request?.body ?? "{}")) as Record<string, string>;
+
+    expect(payload.telegramChatId).toBe("2002");
+  });
 });

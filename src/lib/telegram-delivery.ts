@@ -85,8 +85,9 @@ export async function deliverTelegramReadyMessages(gameId: string) {
 
     for (const player of recipients) {
       const binding = bindingByPlayerId.get(player.id);
+      const chatId = binding?.chatId ?? player.telegramChatId;
 
-      if (!binding) {
+      if (!chatId) {
         continue;
       }
 
@@ -95,7 +96,7 @@ export async function deliverTelegramReadyMessages(gameId: string) {
       }
 
       await sendTelegramMessage(
-        binding.chatId,
+        chatId,
         formatTelegramMessage(message),
         {
           urlButton: buildPlayerGameUrl(game.id, player.id)

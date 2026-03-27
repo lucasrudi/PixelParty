@@ -48,6 +48,47 @@ describe("HomeClient", () => {
     });
   });
 
+  it("includes the Telegram WebApp chat id when available", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          gameId: "game_123",
+          hostPlayerId: "player_123",
+        }),
+      ),
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+    Object.assign(window, {
+      Telegram: {
+        WebApp: {
+          initDataUnsafe: {
+            user: {
+              id: 1001,
+            },
+          },
+        },
+      },
+    });
+
+    render(<HomeClient showSimulatorLink />);
+
+    await user.type(screen.getByLabelText(/host telegram/i), "@fede");
+    await user.click(
+      screen.getByRole("button", { name: /create telegram-ready game/i }),
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    const [, request] = fetchMock.mock.calls[0] ?? [];
+    const payload = JSON.parse(String(request?.body ?? "{}")) as Record<string, string>;
+
+    expect(payload.telegramChatId).toBe("1001");
+  });
+
   it("renders the Telegram bot link when a username is configured", () => {
     render(
       <HomeClient

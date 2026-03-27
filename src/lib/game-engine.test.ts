@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { leaveGame, resetGame, validateQuest } from "@/lib/game-engine";
+import {
+  createGame,
+  joinGame,
+  leaveGame,
+  resetGame,
+  validateQuest,
+} from "@/lib/game-engine";
 import {
   buildStartedSimulatorGame,
   buildStartedTelegramGame,
@@ -96,6 +102,30 @@ describe("game validation flow", () => {
     expect(() => leaveGame(game, host.id)).toThrow(
       "The host cannot leave the game. Delete the game instead.",
     );
+  });
+
+  it("stores Telegram chat ids captured from Telegram WebApp", () => {
+    const game = createGame({
+      title: "Weekend of Bad Decisions",
+      groomName: "Tincho",
+      hostName: "Fede",
+      telegramHandle: "@fede",
+      telegramChatId: "1001",
+      startDate: "2026-03-25",
+      endDate: "2026-03-27",
+      accessMode: "telegram",
+    });
+
+    const { player } = joinGame(game, {
+      name: "Luqui",
+      telegramHandle: "@luqui",
+      telegramChatId: "2002",
+    });
+
+    expect(game.players.find((entry) => entry.id === game.hostPlayerId)?.telegramChatId).toBe(
+      "1001",
+    );
+    expect(player.telegramChatId).toBe("2002");
   });
 
   it("resets a game back to the lobby while keeping the roster", () => {

@@ -6,36 +6,36 @@ Pixel-art multiplayer bachelor-party WebApp inspired by the original `tincho-en-
 
 - A lobby flow where one host creates a game instance, sets the trip start and end dates, and gets a public invite link
 - Join flow for friends using the public link
-- Telegram-ready identity flow using Telegram handles for the main WebApp
+- Telegram identity and bot-delivery flow using Telegram handles plus bot-linked chat IDs
 - A daily narrator loop that:
   - sends context for the current scene
   - asks each player what they are doing
   - assigns a side quest with escalating points
-- Evidence submission for each quest using either an uploaded file or a proof URL / simulator placeholder
+- Evidence submission for each quest using either an uploaded file, a proof URL, or a Telegram photo/video message
 - Player validation inboxes where other players can accept or reject pending evidence
 - A final scoreboard with player titles and an epic wrap-up
 - A `/simulator` route where players can join using names only and test the full lifecycle locally
 
 ## Telegram Setup
 
-### Important constraint
+### Current behavior
 
 This project now has a working Telegram binding and delivery layer for the main game flow.
 
-Today the app:
-
 - stores Telegram handles for the main web flow
-- renders narrator messages in a Telegram-ready format inside the app
+- captures a Telegram user/chat id automatically when the Web App is opened from Telegram
 - reads `TELEGRAM_BOT_TOKEN` on the server and can verify the configured bot through `/api/telegram/bot`
 - exposes the configured bot username publicly through `TELEGRAM_BOT_USERNAME` or `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`
 - accepts Telegram webhook updates through `/api/telegram/webhook`
 - lets players bind their Telegram account to an in-game identity using bot deep links
-- stores Telegram chat IDs and Telegram identifiers encrypted at rest
-- delivers `telegram-ready` narrator and player-specific game messages to bound Telegram chats
+- sends a first Telegram DM after create or join when the Web App already provided the Telegram user id
+- delivers `telegram-ready` narrator and player-specific game messages to linked Telegram chats
+- answers `/today` in Telegram with the current quest
+- accepts a photo or video with a caption in Telegram as evidence for today's quest
 
 Players should still use their real Telegram handles consistently, and each player should start the bot once and complete the bind flow from the game dashboard before expecting Telegram delivery.
 
-### Local Telegram-ready setup
+### Local Telegram setup
 
 Use this when you want to test the real web flow on your machine instead of the `/simulator` route.
 
@@ -47,40 +47,10 @@ npm run dev
 ```
 
 2. Open [http://localhost:3000](http://localhost:3000).
-3. Create a game from `/` using the normal Telegram-ready form.
+3. Create a game from `/` using the normal Telegram form.
 4. Enter real-looking Telegram handles such as `@fede`, `@mauri`, and `@seba` when creating and joining players.
-5. Share the local invite link manually with anyone else testing on the same network, or just open the join page yourself in another browser session.
-
-Optional local bot setup:
-
-1. Create a bot with BotFather.
-2. Ask testers to start the bot once in Telegram.
-3. If you want Telegram to open the local Web App, expose your local app through an HTTPS tunnel such as `ngrok`, `Cloudflare Tunnel`, or similar.
-4. Point the bot menu button or Web App button at that public HTTPS tunnel URL.
-
-Local environment notes:
-
-- `TELEGRAM_BOT_TOKEN` is optional locally unless you want to test the Telegram bot and webhook flow
-- `TELEGRAM_BOT_USERNAME` or `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` is optional locally unless you want the bot CTA and bind links rendered correctly
-- `TELEGRAM_BINDING_ENCRYPTION_KEY` is required if you want to bind Telegram users locally
-- `TELEGRAM_WEBHOOK_SECRET_TOKEN` is recommended locally if you want to test webhook auth
-- `APP_URL` or `NEXT_PUBLIC_APP_URL` is recommended when you want Telegram messages to include links back into the app
-- `.env.local` is only needed if you want to force a specific storage mode locally
-- the simulator can stay enabled locally with the default development behavior, or explicitly with `PIXELPARTY_ENABLE_SIMULATOR=true`
-
-Generate the Telegram-only secrets yourself:
-
-```bash
-openssl rand -base64 32   # TELEGRAM_WEBHOOK_SECRET_TOKEN
-openssl rand -base64 48   # TELEGRAM_BINDING_ENCRYPTION_KEY
-```
-
-Notes:
-
-- `TELEGRAM_WEBHOOK_SECRET_TOKEN` does not come from Telegram; it is your own shared secret between Telegram webhook setup and this app
-- `TELEGRAM_BINDING_ENCRYPTION_KEY` does not come from Telegram either; this app derives its encryption key from that value to encrypt stored Telegram identifiers at rest
-
-Example local `.env.local`:
+5. Create a bot with BotFather.
+6. Set these environment variables:
 
 ```bash
 TELEGRAM_BOT_TOKEN=123456:abcde-your-token
@@ -92,13 +62,11 @@ APP_URL=https://your-public-tunnel.example.com
 PIXELPARTY_GAME_STORAGE=filesystem
 PIXELPARTY_UPLOAD_STORAGE=filesystem
 PIXELPARTY_ENABLE_SIMULATOR=true
+PIXELPARTY_PUBLIC_URL=https://your-public-tunnel.example.com
 ```
 
-Local webhook testing:
-
-1. Expose your local Next.js app through an HTTPS tunnel.
-2. Set `APP_URL` to that public HTTPS URL.
-3. Register the Telegram webhook against your tunnel:
+7. Expose your local app through an HTTPS tunnel such as `ngrok`, `Cloudflare Tunnel`, or similar.
+8. Register the Telegram webhook:
 
 ```bash
 curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
@@ -106,9 +74,17 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
   -d "secret_token=$TELEGRAM_WEBHOOK_SECRET_TOKEN"
 ```
 
-4. Open your game dashboard, click the Telegram bind link for the player, and start the bot in Telegram.
+9. Open the Web App from Telegram if you want create and join to trigger the first DM automatically.
+10. Ask each tester to send `/start` to the bot once so the chat can be linked even when they do not enter through the Web App.
 
-### Production Telegram-ready setup
+Usage notes:
+
+- the create and join flow can send an immediate Telegram DM when the player entered through Telegram WebApp
+- `/today` sends the active quest back into Telegram
+- a photo or video with a caption submits evidence for today's quest
+- if one Telegram account is in multiple active games, use `/today INVITE` or start the evidence caption with `INVITE: description`
+
+### Production Telegram setup
 
 Use this when you want the normal web flow deployed for real players.
 
@@ -120,18 +96,15 @@ Use this when you want the normal web flow deployed for real players.
    - `TELEGRAM_BOT_TOKEN` for the server-side Telegram Bot API integration
    - `TELEGRAM_BOT_USERNAME` for server-side bot metadata and link generation
    - `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` if the client should render the public bot link directly
-   - `TELEGRAM_BINDING_ENCRYPTION_KEY` to encrypt Telegram identifiers and hashes at rest
+   - `TELEGRAM_BINDING_ENCRYPTION_KEY` to encrypt Telegram identifiers at rest
    - `TELEGRAM_WEBHOOK_SECRET_TOKEN` to authenticate Telegram webhook calls
-   - `APP_URL` so Telegram messages can link players back into the deployed app
-   - generate `TELEGRAM_WEBHOOK_SECRET_TOKEN` and `TELEGRAM_BINDING_ENCRYPTION_KEY` yourself with a password generator or `openssl rand`; they are not issued by Telegram
+   - `APP_URL` or `PIXELPARTY_PUBLIC_URL` so Telegram messages can link players back into the deployed app
 4. Register the Telegram webhook to point at `https://your-domain/api/telegram/webhook`.
 5. Keep the simulator disabled unless you explicitly want it:
    - `PIXELPARTY_ENABLE_SIMULATOR=false`
-6. Create a bot with BotFather if you want Telegram to be the entrypoint into the web app.
-7. Ask every player to start the bot once in Telegram.
-8. Point the bot menu button, deep link, or Web App button at your deployed HTTPS app URL.
-9. Require players to enter the same Telegram handle they use in Telegram when they join the non-simulator flow.
-10. Have each player click the bind link from their game dashboard once so the bot can associate their Telegram chat with their in-game identity.
+6. Ask every player to start the bot once in Telegram.
+7. Require players to enter the same Telegram handle they use in Telegram when they join the non-simulator flow.
+8. Open the Web App from Telegram if you want create or join to trigger the first DM automatically.
 
 Example hosted configuration:
 
@@ -144,85 +117,9 @@ NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=pixelparty_bot
 TELEGRAM_BINDING_ENCRYPTION_KEY=replace-with-a-long-random-secret
 TELEGRAM_WEBHOOK_SECRET_TOKEN=replace-with-a-second-long-random-secret
 APP_URL=https://pixelparty.example.com
+PIXELPARTY_PUBLIC_URL=https://pixelparty.example.com
 PIXELPARTY_ENABLE_SIMULATOR=false
 ```
-
-Production behavior today:
-
-- the app reads `TELEGRAM_BOT_TOKEN` on the server
-- the app can verify the configured bot through `GET /api/telegram/bot`
-- the app can render a public bot CTA from `TELEGRAM_BOT_USERNAME` or `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`
-- the app accepts Telegram webhook updates through `POST /api/telegram/webhook`
-- the app stores Telegram chat IDs and Telegram identifiers encrypted at rest
-- the app sends `telegram-ready` game messages to bound Telegram chats
-- Telegram is now used as identity context, bot entrypoint, binding mechanism, and gameplay delivery channel for the `telegram-ready` message stream
-
-Webhook registration example:
-
-```bash
-curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-  -d "url=$APP_URL/api/telegram/webhook" \
-  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET_TOKEN"
-```
-
-### Syncing GitHub secrets into Vercel env vars
-
-If you are storing the production bot token in GitHub repository secrets, this repo now includes [`.github/workflows/sync_env_variables.yml`](.github/workflows/sync_env_variables.yml) to upsert production Vercel env vars from GitHub Actions.
-
-Set these GitHub repository secrets:
-
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_BOT_USERNAME`
-- `TELEGRAM_WEBHOOK_SECRET_TOKEN`
-- `TELEGRAM_BINDING_ENCRYPTION_KEY`
-- `APP_URL`
-- `VERCEL_TOKEN`
-- `VERCEL_PROJECT_ID`
-- `VERCEL_TEAM_ID`
-
-Notes:
-
-- `VERCEL_TEAM_ID` is only needed if the Vercel project belongs to a team; omit it for personal projects
-- the workflow writes `TELEGRAM_BOT_TOKEN` to Vercel as a secret environment variable
-- the workflow writes both `TELEGRAM_BOT_USERNAME` and `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` to Vercel for production
-- the workflow also writes `TELEGRAM_WEBHOOK_SECRET_TOKEN`, `TELEGRAM_BINDING_ENCRYPTION_KEY`, `APP_URL`, and `NEXT_PUBLIC_APP_URL`
-- after changing the GitHub secrets, run the `Sync Repository Secrets To Vercel Env` workflow manually from GitHub Actions so Vercel picks up the rotated values
-
-### Rotating Telegram secrets
-
-Recommended schedule:
-
-- rotate `TELEGRAM_WEBHOOK_SECRET_TOKEN` every 90 days, or immediately if you suspect it was exposed
-- do not rotate `TELEGRAM_BINDING_ENCRYPTION_KEY` on a fixed schedule unless you also plan a binding re-encryption or reset process
-
-How to rotate `TELEGRAM_WEBHOOK_SECRET_TOKEN`:
-
-1. Generate a new value:
-
-```bash
-openssl rand -base64 32
-```
-
-2. Update the GitHub repository secret `TELEGRAM_WEBHOOK_SECRET_TOKEN`.
-3. Run the `Sync Repository Secrets To Vercel Env` workflow.
-4. Re-register the Telegram webhook with the new `secret_token`:
-
-```bash
-curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-  -d "url=$APP_URL/api/telegram/webhook" \
-  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET_TOKEN"
-```
-
-5. Confirm webhook calls still succeed against `/api/telegram/webhook`.
-
-How to rotate `TELEGRAM_BINDING_ENCRYPTION_KEY`:
-
-- treat this as a planned maintenance change, not a routine secret rotation
-- existing encrypted Telegram bindings depend on the current key-derived secret
-- if you replace it without migrating or clearing bindings, previously stored Telegram bindings will stop decrypting
-- the safe options are either:
-  - add a migration path that decrypts and re-encrypts all bindings with the new secret
-  - or clear existing Telegram bindings and require players to bind again
 
 ## Run Locally
 
@@ -317,7 +214,7 @@ Production note:
 Before going live, make sure the server has:
 
 - Node.js installed
-- outbound internet access for user-uploaded proof URLs and future integrations
+- outbound internet access for user-uploaded proof URLs and Telegram Bot API traffic
 - an HTTPS public domain
 - either:
   - enough writable disk space for `.data/` and `public/uploads/`, or
@@ -339,6 +236,8 @@ Edge Config was intentionally not used for live game state because this app upda
 - `/join/[inviteCode]` — public lobby join page
 - `/game/[gameId]?player=PLAYER_ID` — player dashboard
 - `/simulator` — local names-only simulator
+- `/api/telegram/bot` — Telegram bot status and profile summary
+- `/api/telegram/webhook` — Telegram bot webhook for binding chats, `/today`, and receiving evidence media
 
 ## Validation
 

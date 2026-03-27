@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Game } from "@/lib/types";
+import { readTelegramWebAppChatId } from "@/lib/telegram-webapp";
 import styles from "./join-client.module.css";
 
 const DEFAULT_PLAYER_NAME = "Luqui";
@@ -14,6 +15,7 @@ export function JoinClient({ game }: { game: Game }) {
 
   async function handleJoin(formData: FormData) {
     setError("");
+    const telegramChatId = readTelegramWebAppChatId();
 
     const response = await fetch(`/api/games/${game.id}/join`, {
       method: "POST",
@@ -23,6 +25,7 @@ export function JoinClient({ game }: { game: Game }) {
       body: JSON.stringify({
         name: String(formData.get("name") ?? "").trim() || DEFAULT_PLAYER_NAME,
         telegramHandle: String(formData.get("telegramHandle") ?? ""),
+        ...(telegramChatId ? { telegramChatId } : {}),
       }),
     });
 

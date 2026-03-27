@@ -72,6 +72,11 @@ export function normalizeTelegramHandle(value?: string) {
   return normalized ? `@${normalized}` : "";
 }
 
+function sanitizeTelegramChatId(value?: string) {
+  const normalized = value?.trim() ?? "";
+  return /^\d+$/.test(normalized) ? normalized : "";
+}
+
 function buildTraits(): Record<PlayerTrait, number> {
   return {
     chaos: 1,
@@ -115,6 +120,7 @@ function selectAvatar(usedAvatars: string[]) {
 function createPlayer(
   name: string,
   telegramHandle: string,
+  telegramChatId: string,
   usedAvatars: string[],
   isHost: boolean,
 ): Player {
@@ -123,6 +129,7 @@ function createPlayer(
     name: toTitleCase(name.trim()),
     telegramHandle: normalizeTelegramHandle(telegramHandle),
     telegramBindingToken: createBindingToken(),
+    telegramChatId: sanitizeTelegramChatId(telegramChatId) || undefined,
     joinedAt: now(),
     points: 0,
     avatarKey: selectAvatar(usedAvatars),
@@ -289,6 +296,7 @@ export function createGame(input: CreateGameInput): Game {
   const host = createPlayer(
     input.hostName,
     input.telegramHandle ?? "",
+    input.telegramChatId ?? "",
     [],
     true,
   );
@@ -356,6 +364,7 @@ export function joinGame(game: Game, input: JoinGameInput) {
   const player = createPlayer(
     input.name,
     input.telegramHandle ?? "",
+    input.telegramChatId ?? "",
     game.players.map((member) => member.avatarKey),
     false,
   );

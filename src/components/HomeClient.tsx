@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { listStoryBeats } from "@/lib/story";
 import type { JoinedGameSummary } from "@/lib/types";
+import { readTelegramWebAppChatId } from "@/lib/telegram-webapp";
 import styles from "./home-client.module.css";
 
 function offsetDate(days: number) {
@@ -45,6 +46,7 @@ export function HomeClient({
 
   async function handleCreate(formData: FormData) {
     setCreateError("");
+    const telegramChatId = readTelegramWebAppChatId();
 
     const payload = {
       title: String(formData.get("title") ?? "").trim() || DEFAULT_GAME_TITLE,
@@ -53,6 +55,7 @@ export function HomeClient({
       endDate: String(formData.get("endDate") ?? ""),
       hostName: String(formData.get("hostName") ?? "").trim() || DEFAULT_HOST_NAME,
       telegramHandle: String(formData.get("telegramHandle") ?? ""),
+      ...(telegramChatId ? { telegramChatId } : {}),
       accessMode: "telegram" as const,
       enabledTags: [
         formData.get("tag_alcohol") ? "alcohol" : null,
@@ -150,7 +153,12 @@ export function HomeClient({
             ) : null}
           </div>
           <div className={styles.telegramNote}>
-            <strong>Telegram note.</strong> This app now reads the bot configuration from environment variables for server-side Telegram integration, but gameplay delivery is still Telegram-ready rather than full Telegram DM automation. Players should still start the bot once and use the same handle they enter in the app.
+            <strong>Telegram note.</strong> Players should join with the same
+            Telegram handle they use in the bot, then start the bot once to link
+            their chat. If they open the Web App from Telegram, create and join can
+            also trigger the first DM immediately. After that they can receive the
+            daily quest in Telegram and submit photo or video evidence there with a
+            caption.
             {telegramBotUsername ? ` Current bot: @${telegramBotUsername}.` : ""}
           </div>
         </div>

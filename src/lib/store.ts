@@ -1,7 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 import postgres, { type Sql } from "postgres";
-import { Game } from "@/lib/types";
+import { normalizeTelegramHandle } from "@/lib/game-engine";
+import { Game, Player } from "@/lib/types";
 import {
   assertGameStorageAvailable,
   getDatabaseUrl,
@@ -265,6 +266,29 @@ export async function listGames() {
   return Object.values(store.games).sort((left, right) =>
     right.createdAt.localeCompare(left.createdAt),
   );
+}
+
+export async function listGamesForTelegramHandle(telegramHandle: string) {
+  const normalizedHandle = normalizeTelegramHandle(telegramHandle);
+
+  if (!normalizedHandle) {
+    return [] as Array<{ game: Game; player: Player }>;
+  }
+
+  const games = await listGames();
+
+  return games.flatMap((game) => {
+    if (game.accessMode !== "telegram") {
+      return [];
+    }
+
+    const player = game.players.find(
+      (entry) =>
+        entry.telegramHandle.toLowerCase() === normalizedHandle.toLowerCase(),
+    );
+
+    return player ? [{ game, player }] : [];
+  });
 }
 
 export async function getGame(gameId: string) {

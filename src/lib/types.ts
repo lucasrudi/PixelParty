@@ -103,6 +103,22 @@ export interface FinaleCard {
 
 export type QuestTagToggle = "alcohol" | "locuras" | "vegas";
 
+export interface JoinedGameSummary {
+  accessMode: AccessMode;
+  currentDay: number;
+  endDate: string;
+  gameId: string;
+  hostName: string;
+  joinedAt: string;
+  playerId: string;
+  playerName: string;
+  startDate: string;
+  status: GameStatus;
+  title: string;
+  totalDays: number;
+  updatedAt: string;
+}
+
 export interface Game {
   id: string;
   inviteCode: string;

@@ -151,7 +151,6 @@ function createPlayer(
     telegramHandle: normalizeTelegramHandle(telegramHandle),
     telegramUserId: sanitizedTelegramUserId || undefined,
     telegramVerifiedAt,
-    telegramBindingToken: createBindingToken(),
     telegramChatId: sanitizeTelegramChatId(telegramChatId) || undefined,
     joinedAt: now(),
     points: 0,
@@ -312,7 +311,7 @@ export function createGame(input: CreateGameInput): Game {
     input.accessMode === "telegram" &&
     !hasTelegramIdentity(input)
   ) {
-    throw new Error("The host needs a Telegram login or handle for the web game.");
+    throw new Error("The host needs a Telegram User ID or Telegram login for the web game.");
   }
 
   const totalDays = assertDateRange(input.startDate, input.endDate);
@@ -377,7 +376,7 @@ export function joinGame(game: Game, input: JoinGameInput) {
     game.accessMode === "telegram" &&
     !hasTelegramIdentity(input)
   ) {
-    throw new Error("A Telegram login or handle is required for the web game.");
+    throw new Error("A Telegram User ID or Telegram login is required for the web game.");
   }
 
   const normalizedName = input.name.trim().toLowerCase();

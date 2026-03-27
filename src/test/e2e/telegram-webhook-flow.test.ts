@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "fs/promises";
+import { mkdtemp, rm } from "fs/promises";
 import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,34 +36,30 @@ describe.sequential("telegram webhook flow", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it("binds a Telegram chat, stores identifiers encrypted, and delivers pending messages", async () => {
+  it("sends today quest when /today command is received from a linked player", async () => {
     const fetchMock = vi.fn().mockImplementation(
       async () =>
         new Response(JSON.stringify({ ok: true, result: { message_id: 1 } })),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const { saveGame, getGame } = await import("@/lib/store");
-    const { getTelegramBindingByPlayerId } = await import("@/lib/telegram-bindings");
+    const { saveGame } = await import("@/lib/store");
     const webhookRoute = await import("@/app/api/telegram/webhook/route");
 
     const game = createGame({
       title: "Production Bash",
       groomName: "Tincho",
       hostName: "Fede",
-      telegramHandle: "@fede",
+      telegramUserId: "111111",
       startDate: "2026-03-27",
       endDate: "2026-03-29",
       accessMode: "telegram",
     });
 
-    joinGame(game, { name: "Mauri", telegramHandle: "@mauri" });
-    joinGame(game, { name: "Seba", telegramHandle: "@seba" });
+    joinGame(game, { name: "Mauri", telegramUserId: "998877", telegramChatId: "998877" });
+    joinGame(game, { name: "Seba", telegramUserId: "123456", telegramChatId: "123456" });
     startGame(game);
     await saveGame(game);
-
-    const mauri = game.players.find((player) => player.name === "Mauri");
-    expect(mauri?.telegramBindingToken).toBeTruthy();
 
     const response = await webhookRoute.POST(
       new Request("http://localhost/api/telegram/webhook", {
@@ -76,46 +72,16 @@ describe.sequential("telegram webhook flow", () => {
           update_id: 1,
           message: {
             message_id: 1,
-            text: `/start bind_${mauri?.telegramBindingToken}`,
-            chat: {
-              id: 998877,
-              type: "private",
-            },
-            from: {
-              id: 123456,
-              is_bot: false,
-              first_name: "Mauri",
-              username: "mauri",
-            },
+            text: "/today",
+            chat: { id: 998877, type: "private" },
+            from: { id: 998877, is_bot: false, first_name: "Mauri" },
           },
         }),
       }),
     );
 
     expect(response.ok).toBe(true);
-
-    const binding = await getTelegramBindingByPlayerId(mauri!.id);
-    expect(binding?.playerId).toBe(mauri!.id);
-    expect(binding?.chatId).toBe("998877");
-    expect(binding?.telegramUserId).toBe("123456");
-    expect(binding?.telegramUsername).toBe("mauri");
-
-    const bindingStore = await readFile(
-      path.join(tempDir, ".data", "telegram-bindings.json"),
-      "utf8",
-    );
-
-    expect(bindingStore).not.toContain("998877");
-    expect(bindingStore).not.toContain("123456");
-    expect(bindingStore).not.toContain("mauri");
-
-    const updatedGame = await getGame(game.id);
-    const deliveredMessages = updatedGame?.messages.filter((message) =>
-      message.telegramDeliveredTo?.includes(mauri!.id),
-    );
-
-    expect(deliveredMessages && deliveredMessages.length > 0).toBe(true);
-    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(1);
 
     const [firstUrl] = fetchMock.mock.calls[0] ?? [];
     expect(String(firstUrl)).toContain("/sendMessage");

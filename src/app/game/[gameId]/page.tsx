@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { GameClient } from "@/components/GameClient";
 import { isSimulatorEnabled } from "@/lib/storage-config";
 import { getGame } from "@/lib/store";
-import { getTelegramBindingViewForPlayer } from "@/lib/telegram-delivery";
+import { getTelegramLinkedForPlayer } from "@/lib/telegram-delivery";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +26,13 @@ export default async function GamePage({
   }
 
   const currentPlayer = game.players.find((player) => player.id === playerId);
-  const telegramBinding = await getTelegramBindingViewForPlayer(currentPlayer);
+  const isTelegramLinked = getTelegramLinkedForPlayer(currentPlayer);
 
   return (
     <GameClient
       game={game}
       currentPlayer={currentPlayer}
-      telegramBinding={telegramBinding}
+      isTelegramLinked={isTelegramLinked}
     />
   );
 }

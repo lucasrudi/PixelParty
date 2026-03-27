@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createGame, normalizeTelegramHandle } from "@/lib/game-engine";
+import { createGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { logServerWarning } from "@/lib/server-log";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
-import { listGamesForTelegramHandle, saveGame } from "@/lib/store";
+import { listGamesForTelegramUserId, saveGame } from "@/lib/store";
 import {
   getCookieValue,
   getTelegramHandleFromSession,
@@ -18,18 +18,16 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const telegramHandle = normalizeTelegramHandle(
-      searchParams.get("telegramHandle") ?? "",
-    );
+    const telegramUserId = (searchParams.get("telegramUserId") ?? "").trim();
 
-    if (!telegramHandle) {
+    if (!telegramUserId) {
       return NextResponse.json(
-        { error: "A Telegram handle is required." },
+        { error: "A Telegram User ID is required." },
         { status: 400 },
       );
     }
 
-    const games = await listGamesForTelegramHandle(telegramHandle);
+    const games = await listGamesForTelegramUserId(telegramUserId);
 
     return NextResponse.json({
       games: games.map(({ game, player }) => ({
@@ -67,7 +65,7 @@ export async function POST(request: Request) {
         body.telegramHandle?.trim() || getTelegramHandleFromSession(telegramSession),
       telegramUserId: telegramSession?.id ?? body.telegramUserId,
       telegramVerifiedAt: telegramSession?.verifiedAt ?? body.telegramVerifiedAt,
-      telegramChatId: body.telegramChatId ?? telegramSession?.id,
+      telegramChatId: body.telegramChatId ?? telegramSession?.id ?? body.telegramUserId,
     };
 
     if (effectiveBody.accessMode === "simulator") {

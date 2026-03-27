@@ -23,6 +23,7 @@ export function JoinClient({
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const linkedHandle = telegramAuth?.username ? `@${telegramAuth.username}` : "";
+  const linkedUserId = telegramAuth?.id ?? "";
   const telegramAuthError = searchParams.get("telegramAuthError") ?? "";
 
   async function handleJoin(formData: FormData) {
@@ -36,8 +37,8 @@ export function JoinClient({
       },
       body: JSON.stringify({
         name: String(formData.get("name") ?? "").trim() || DEFAULT_PLAYER_NAME,
-        telegramHandle:
-          String(formData.get("telegramHandle") ?? "").trim() || linkedHandle,
+        telegramUserId:
+          String(formData.get("telegramUserId") ?? "").trim() || linkedUserId,
         ...(telegramChatId ? { telegramChatId } : {}),
       }),
     });
@@ -102,20 +103,19 @@ export function JoinClient({
           </label>
           {game.accessMode === "telegram" ? (
             <label>
-              Telegram handle
+              Your Telegram User ID
               <input
-                name="telegramHandle"
-                placeholder="@luqui"
-                defaultValue={linkedHandle}
-                readOnly={Boolean(linkedHandle)}
+                name="telegramUserId"
+                placeholder="123456789"
+                defaultValue={linkedUserId}
+                readOnly={Boolean(linkedUserId)}
                 required={!telegramAuth}
               />
             </label>
           ) : null}
-          {game.accessMode === "telegram" && telegramAuth && !linkedHandle ? (
+          {game.accessMode === "telegram" && !telegramAuth ? (
             <p className={styles.fieldHint}>
-              Telegram is linked already. Add a public `@username` only if you want it shown in
-              the roster.
+              Message @userinfobot in Telegram to get your numeric user ID.
             </p>
           ) : null}
           {error ? <p className={styles.error}>{error}</p> : null}

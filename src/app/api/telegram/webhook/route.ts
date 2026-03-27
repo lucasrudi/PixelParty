@@ -2,17 +2,10 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/route-response";
 import { logServerWarning } from "@/lib/server-log";
 import {
-  bindTelegramPlayer,
-  deliverTelegramReadyMessages,
-  resolveTelegramBindingToken,
-} from "@/lib/telegram-delivery";
-import {
-  getAppBaseUrl,
   getInviteCodeFromTodayCommand,
   getTelegramWebhookSecret,
   isTelegramCommand,
   linkTelegramChat,
-  sendTelegramMessage,
   sendTelegramText,
   sendTodayQuestForChat,
   submitTelegramEvidence,
@@ -20,20 +13,6 @@ import {
 } from "@/lib/telegram";
 
 export const dynamic = "force-dynamic";
-
-function extractStartPayload(text?: string) {
-  if (!text) {
-    return null;
-  }
-
-  const [command, payload] = text.trim().split(/\s+/, 2);
-
-  if (command !== "/start") {
-    return null;
-  }
-
-  return payload ?? null;
-}
 
 export async function POST(request: Request) {
   try {
@@ -53,60 +32,6 @@ export async function POST(request: Request) {
 
     const chatId = String(message.chat.id);
     const username = message.from?.username;
-    const payload = extractStartPayload(message.text);
-
-    if (payload?.startsWith("bind_") && message.from?.id) {
-      const bindingToken = payload.slice("bind_".length);
-      const resolved = await resolveTelegramBindingToken(bindingToken);
-
-      if (!resolved) {
-        await sendTelegramMessage(
-          chatId,
-          "That PixelParty bind link is invalid or expired. Open the game dashboard again and generate a fresh bind link.",
-        );
-        return NextResponse.json({ ok: true });
-      }
-
-      await bindTelegramPlayer({
-        chatId,
-        gameId: resolved.game.id,
-        playerId: resolved.player.id,
-        telegramUserId: String(message.from.id),
-        telegramUsername: username,
-      });
-      await linkTelegramChat(username, chatId).catch((error) =>
-        logServerWarning("telegram.bind.link-chat", error, {
-          chatId,
-          gameId: resolved.game.id,
-          playerId: resolved.player.id,
-          username,
-        }),
-      );
-
-      const playerUrl = getAppBaseUrl()
-        ? `${getAppBaseUrl()}/game/${resolved.game.id}?player=${resolved.player.id}`
-        : null;
-      const handleNote =
-        resolved.player.telegramHandle && username
-          ? `\n\nHandle on file: ${resolved.player.telegramHandle}\nTelegram account: @${username}`
-          : "";
-
-      await sendTelegramMessage(
-        chatId,
-        `PixelParty linked successfully for ${resolved.player.name} in ${resolved.game.title}.${handleNote}`,
-        playerUrl
-          ? {
-              urlButton: {
-                label: "Open your game dashboard",
-                url: playerUrl,
-              },
-            }
-          : undefined,
-      );
-
-      await deliverTelegramReadyMessages(resolved.game.id);
-      return NextResponse.json({ ok: true });
-    }
 
     if (isTelegramCommand(update, "/start")) {
       const linkedGames = await linkTelegramChat(username, chatId);

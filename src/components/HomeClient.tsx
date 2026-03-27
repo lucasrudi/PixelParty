@@ -48,6 +48,7 @@ export function HomeClient({
   const [isCreatePending, startCreateTransition] = useTransition();
   const [isLookupPending, startLookupTransition] = useTransition();
   const linkedHandle = telegramAuth?.username ? `@${telegramAuth.username}` : "";
+  const linkedUserId = telegramAuth?.id ?? "";
   const telegramAuthError = searchParams.get("telegramAuthError") ?? "";
 
   async function handleCreate(formData: FormData) {
@@ -60,8 +61,8 @@ export function HomeClient({
       startDate: String(formData.get("startDate") ?? ""),
       endDate: String(formData.get("endDate") ?? ""),
       hostName: String(formData.get("hostName") ?? "").trim() || DEFAULT_HOST_NAME,
-      telegramHandle:
-        String(formData.get("telegramHandle") ?? "").trim() || linkedHandle,
+      telegramUserId:
+        String(formData.get("telegramUserId") ?? "").trim() || linkedUserId,
       ...(telegramChatId ? { telegramChatId } : {}),
       accessMode: "telegram" as const,
       enabledTags: [
@@ -96,14 +97,14 @@ export function HomeClient({
   }
 
   async function handleResumeLookup(formData: FormData) {
-    const telegramHandle =
-      String(formData.get("telegramHandle") ?? "").trim() || linkedHandle;
+    const telegramUserId =
+      String(formData.get("telegramUserId") ?? "").trim() || linkedUserId;
 
     setResumeError("");
-    setSearchedHandle(telegramHandle);
+    setSearchedHandle(telegramUserId);
 
     const response = await fetch(
-      `/api/games?telegramHandle=${encodeURIComponent(telegramHandle)}`,
+      `/api/games?telegramUserId=${encodeURIComponent(telegramUserId)}`,
     );
     const data = (await response.json()) as {
       error?: string;
@@ -236,7 +237,7 @@ export function HomeClient({
               <h3>See every lobby or run you already joined.</h3>
             </div>
             <p className={styles.summary}>
-              Enter the same Telegram handle you used when you joined. We&apos;ll list every matching game so you can jump back in without hunting for the old URL.
+              Enter the Telegram User ID you used when you joined. We&apos;ll list every matching game so you can jump back in without hunting for the old URL.
             </p>
             <form
               className={styles.lookupForm}
@@ -248,11 +249,11 @@ export function HomeClient({
               }}
             >
               <label>
-                Telegram handle
+                Telegram User ID
                 <input
-                  name="telegramHandle"
-                  placeholder="@luqui"
-                  defaultValue={linkedHandle}
+                  name="telegramUserId"
+                  placeholder="123456789"
+                  defaultValue={linkedUserId}
                   required
                 />
               </label>
@@ -345,20 +346,24 @@ export function HomeClient({
               <input name="hostName" placeholder={DEFAULT_HOST_NAME} />
             </label>
             <label>
-              Host Telegram handle
+              Your Telegram User ID
               <input
-                name="telegramHandle"
-                placeholder="@fede"
-                defaultValue={linkedHandle}
-                readOnly={Boolean(linkedHandle)}
+                name="telegramUserId"
+                placeholder="123456789"
+                defaultValue={linkedUserId}
+                readOnly={Boolean(linkedUserId)}
                 required={!telegramAuth}
               />
             </label>
-            {telegramAuth && !linkedHandle ? (
+            {telegramAuth ? (
               <p className={styles.fieldHint}>
-                Telegram is linked. A public `@username` is optional here and only used for display.
+                Telegram is linked. Your numeric user ID will be used for bot messages.
               </p>
-            ) : null}
+            ) : (
+              <p className={styles.fieldHint}>
+                Message @userinfobot in Telegram to get your numeric user ID.
+              </p>
+            )}
             <div className={styles.dateRow}>
               <label>
                 Start date

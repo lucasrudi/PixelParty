@@ -32,7 +32,7 @@ describe("JoinClient", () => {
     );
 
     await user.type(screen.getByLabelText(/your name/i), "Luqui");
-    await user.type(screen.getByLabelText(/telegram handle/i), "@luqui");
+    await user.type(screen.getByLabelText(/your telegram user id/i), "111222333");
     await user.click(screen.getByRole("button", { name: /join the party/i }));
 
     await waitFor(() => {
@@ -48,7 +48,7 @@ describe("JoinClient", () => {
     const payload = JSON.parse(String(request?.body ?? "{}")) as Record<string, string>;
 
     expect(payload.name).toBe("Luqui");
-    expect(payload.telegramHandle).toBe("@luqui");
+    expect(payload.telegramUserId).toBe("111222333");
 
     await waitFor(() => {
       expect(mockRouter.push).toHaveBeenCalledWith(
@@ -98,7 +98,7 @@ describe("JoinClient", () => {
     const [, request] = fetchMock.mock.calls[0] ?? [];
     const payload = JSON.parse(String(request?.body ?? "{}")) as Record<string, string>;
 
-    expect(payload.telegramHandle).toBe("@luqui");
+    expect(payload.telegramUserId).toBe("987654321");
   });
 
   it("includes the Telegram WebApp chat id when available", async () => {
@@ -138,7 +138,7 @@ describe("JoinClient", () => {
     );
 
     await user.type(screen.getByLabelText(/your name/i), "Luqui");
-    await user.type(screen.getByLabelText(/telegram handle/i), "@luqui");
+    await user.type(screen.getByLabelText(/your telegram user id/i), "111222333");
     await user.click(screen.getByRole("button", { name: /join the party/i }));
 
     await waitFor(() => {

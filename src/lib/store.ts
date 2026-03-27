@@ -291,6 +291,29 @@ export async function listGamesForTelegramHandle(telegramHandle: string) {
   });
 }
 
+export async function listGamesForTelegramUserId(telegramUserId: string) {
+  const normalized = telegramUserId.trim();
+
+  if (!normalized) {
+    return [] as Array<{ game: Game; player: Player }>;
+  }
+
+  const games = await listGames();
+
+  return games.flatMap((game) => {
+    if (game.accessMode !== "telegram") {
+      return [];
+    }
+
+    const player = game.players.find(
+      (entry) =>
+        entry.telegramUserId === normalized || entry.telegramChatId === normalized,
+    );
+
+    return player ? [{ game, player }] : [];
+  });
+}
+
 export async function getGame(gameId: string) {
   if (resolveGameStorageDriver() === "postgres") {
     await ensureGamesTable();

@@ -29,7 +29,7 @@ export async function POST(
         body.telegramHandle?.trim() || getTelegramHandleFromSession(telegramSession),
       telegramUserId: telegramSession?.id ?? body.telegramUserId,
       telegramVerifiedAt: telegramSession?.verifiedAt ?? body.telegramVerifiedAt,
-      telegramChatId: body.telegramChatId ?? telegramSession?.id,
+      telegramChatId: body.telegramChatId ?? telegramSession?.id ?? body.telegramUserId,
     };
     let joinedPlayerId = "";
 

@@ -140,15 +140,11 @@ function finaleWinnerHype(game: Game, winner?: Player) {
 export function GameClient({
   game,
   currentPlayer,
-  telegramBinding,
+  isTelegramLinked,
 }: {
   game: Game;
   currentPlayer?: Player;
-  telegramBinding?: {
-    isBound: boolean;
-    bindUrl: string | null;
-    boundAt?: string;
-  };
+  isTelegramLinked?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -450,20 +446,13 @@ export function GameClient({
         {game.accessMode === "telegram" ? (
           <div className={styles.activityPrompt}>
             <strong>
-              {telegramBinding?.isBound
-                ? "Telegram connected"
-                : "Connect your Telegram account"}
+              {isTelegramLinked ? "Telegram connected" : "Telegram not linked"}
             </strong>
             <p>
-              {telegramBinding?.isBound
-                ? `This player is linked for Telegram delivery${telegramBinding.boundAt ? ` since ${formatDate(telegramBinding.boundAt)}` : ""}.`
-                : "Open the bot once, then use the bind link below so future narrator messages can reach you in Telegram."}
+              {isTelegramLinked
+                ? "This player is linked for Telegram delivery."
+                : "No Telegram User ID on file. Rejoin the game and enter your numeric Telegram User ID so the narrator can reach you."}
             </p>
-            {!telegramBinding?.isBound && telegramBinding?.bindUrl ? (
-              <a href={telegramBinding.bindUrl} target="_blank" rel="noreferrer">
-                Bind this player in Telegram
-              </a>
-            ) : null}
           </div>
         ) : null}
         {game.status === "active" ? (

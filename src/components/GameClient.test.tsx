@@ -48,44 +48,31 @@ describe("GameClient validation inbox", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the Telegram bind link for an unbound player in telegram games", () => {
+  it("shows the not-linked Telegram state when no chatId is set", () => {
     const { game, seba } = buildStartedTelegramGame();
 
     render(
       <GameClient
         game={game}
         currentPlayer={seba}
-        telegramBinding={{
-          isBound: false,
-          bindUrl: "https://t.me/pixelparty_bot?start=bind_player-token",
-        }}
+        isTelegramLinked={false}
       />,
     );
 
     expect(
       screen.getByRole("heading", { name: /seba's dashboard/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Connect your Telegram account")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /bind this player in telegram/i }),
-    ).toHaveAttribute(
-      "href",
-      "https://t.me/pixelparty_bot?start=bind_player-token",
-    );
+    expect(screen.getByText("Telegram not linked")).toBeInTheDocument();
   });
 
-  it("shows the connected Telegram state for a bound player", () => {
+  it("shows the connected Telegram state when a chatId is present", () => {
     const { game, seba } = buildStartedTelegramGame();
 
     render(
       <GameClient
         game={game}
         currentPlayer={seba}
-        telegramBinding={{
-          isBound: true,
-          bindUrl: null,
-          boundAt: "2026-03-28T12:00:00.000Z",
-        }}
+        isTelegramLinked={true}
       />,
     );
 
@@ -93,8 +80,5 @@ describe("GameClient validation inbox", () => {
     expect(
       screen.getByText(/this player is linked for telegram delivery/i),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /bind this player in telegram/i }),
-    ).not.toBeInTheDocument();
   });
 });

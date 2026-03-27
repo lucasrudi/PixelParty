@@ -1,13 +1,7 @@
 import { Game, GameMessage, Player } from "@/lib/types";
-import {
-  getTelegramBindingByPlayerId,
-  listTelegramBindingsForGame,
-  upsertTelegramBinding,
-} from "@/lib/telegram-bindings";
-import { getGame, listGames, updateGame } from "@/lib/store";
+import { getGame, updateGame } from "@/lib/store";
 import {
   getAppBaseUrl,
-  getTelegramBindUrl,
   isTelegramBotConfigured,
   sendTelegramMessage,
 } from "@/lib/telegram";
@@ -24,32 +18,6 @@ function buildPlayerGameUrl(gameId: string, playerId: string) {
   }
 
   return `${baseUrl}/game/${gameId}?player=${playerId}`;
-}
-
-export async function resolveTelegramBindingToken(bindingToken: string) {
-  const games = await listGames();
-
-  for (const game of games) {
-    const player = game.players.find(
-      (entry) => entry.telegramBindingToken === bindingToken,
-    );
-
-    if (player) {
-      return { game, player };
-    }
-  }
-
-  return null;
-}
-
-export async function bindTelegramPlayer(input: {
-  gameId: string;
-  playerId: string;
-  telegramUserId: string;
-  chatId: string;
-  telegramUsername?: string;
-}) {
-  return upsertTelegramBinding(input);
 }
 
 function getIntendedRecipients(game: Game, message: GameMessage) {
@@ -71,8 +39,6 @@ export async function deliverTelegramReadyMessages(gameId: string) {
     return { deliveredCount: 0 };
   }
 
-  const bindings = await listTelegramBindingsForGame(game.id);
-  const bindingByPlayerId = new Map(bindings.map((binding) => [binding.playerId, binding]));
   const deliveredByMessageId = new Map<string, string[]>();
   let deliveredCount = 0;
 
@@ -84,8 +50,7 @@ export async function deliverTelegramReadyMessages(gameId: string) {
     const recipients = getIntendedRecipients(game, message);
 
     for (const player of recipients) {
-      const binding = bindingByPlayerId.get(player.id);
-      const chatId = binding?.chatId ?? player.telegramChatId;
+      const chatId = player.telegramChatId;
 
       if (!chatId) {
         continue;
@@ -142,19 +107,6 @@ export async function deliverTelegramReadyMessages(gameId: string) {
   return { deliveredCount };
 }
 
-export async function getTelegramBindingViewForPlayer(player?: Player) {
-  if (!player) {
-    return {
-      isBound: false,
-      bindUrl: null,
-    };
-  }
-
-  const binding = await getTelegramBindingByPlayerId(player.id);
-
-  return {
-    isBound: Boolean(binding),
-    bindUrl: getTelegramBindUrl(player.telegramBindingToken ?? ""),
-    boundAt: binding?.boundAt,
-  };
+export function getTelegramLinkedForPlayer(player?: Player) {
+  return Boolean(player?.telegramChatId);
 }

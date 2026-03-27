@@ -26,7 +26,7 @@ describe("HomeClient", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText(/host telegram/i), "@fede");
+    await user.type(screen.getByLabelText(/your telegram user id/i), "111222333");
     await user.click(
       screen.getByRole("button", { name: /create telegram-ready game/i }),
     );
@@ -47,7 +47,7 @@ describe("HomeClient", () => {
     const payload = JSON.parse(String(request?.body ?? "{}")) as Record<string, string>;
 
     expect(payload.accessMode).toBe("telegram");
-    expect(payload.telegramHandle).toBe("@fede");
+    expect(payload.telegramUserId).toBe("111222333");
 
     await waitFor(() => {
       expect(mockRouter.push).toHaveBeenCalledWith("/game/game_123?player=player_123");
@@ -92,7 +92,7 @@ describe("HomeClient", () => {
     const [, request] = fetchMock.mock.calls[0] ?? [];
     const payload = JSON.parse(String(request?.body ?? "{}")) as Record<string, string>;
 
-    expect(payload.telegramHandle).toBe("@fede");
+    expect(payload.telegramUserId).toBe("123456789");
   });
 
   it("includes the Telegram WebApp chat id when available", async () => {
@@ -127,7 +127,7 @@ describe("HomeClient", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText(/host telegram/i), "@fede");
+    await user.type(screen.getByLabelText(/your telegram user id/i), "111222333");
     await user.click(
       screen.getByRole("button", { name: /create telegram-ready game/i }),
     );
@@ -155,7 +155,7 @@ describe("HomeClient", () => {
     expect(screen.getByText(/current bot: @pixel_party_bot/i)).toBeInTheDocument();
   });
 
-  it("looks up joined games by telegram handle and resumes the selected run", async () => {
+  it("looks up joined games by telegram user id and resumes the selected run", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -191,11 +191,11 @@ describe("HomeClient", () => {
       />,
     );
 
-    await user.type(screen.getByRole("textbox", { name: /^telegram handle$/i }), "@seba");
+    await user.type(screen.getByRole("textbox", { name: /^telegram user id$/i }), "987654321");
     await user.click(screen.getByRole("button", { name: /find my games/i }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith("/api/games?telegramHandle=%40seba");
+      expect(fetchMock).toHaveBeenCalledWith("/api/games?telegramUserId=987654321");
     });
 
     expect(screen.getByText("Weekend of Bad Decisions")).toBeInTheDocument();

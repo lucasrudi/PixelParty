@@ -3,7 +3,6 @@ import { assertCanManageGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { deleteGame, getGame } from "@/lib/store";
-import { deleteTelegramBindingsForGame } from "@/lib/telegram-bindings";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +46,6 @@ export async function DELETE(
     }
 
     assertCanManageGame(game, body.playerId);
-    await deleteTelegramBindingsForGame(gameId);
     await deleteGame(gameId);
 
     return NextResponse.json({ ok: true, gameId });

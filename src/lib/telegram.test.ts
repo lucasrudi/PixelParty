@@ -4,6 +4,7 @@ import {
   getTelegramBotUrl,
   getTelegramBotUsername,
   isTelegramBotConfigured,
+  parseInviteCodeFromCaption,
 } from "@/lib/telegram";
 
 describe("telegram configuration", () => {
@@ -44,5 +45,19 @@ describe("telegram configuration", () => {
         TELEGRAM_BOT_TOKEN: "123456:abc",
       }),
     ).toBe(true);
+  });
+
+  it("parses invite-prefixed captions without regex backtracking", () => {
+    expect(parseInviteCodeFromCaption("abc123 : Sunrise proof from the beach")).toEqual({
+      description: "Sunrise proof from the beach",
+      inviteCode: "ABC123",
+    });
+  });
+
+  it("falls back to plain caption text when no invite prefix is present", () => {
+    expect(parseInviteCodeFromCaption("Just a normal proof caption")).toEqual({
+      description: "Just a normal proof caption",
+      inviteCode: "",
+    });
   });
 });

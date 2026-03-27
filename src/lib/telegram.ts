@@ -376,16 +376,23 @@ function parseInviteCodeFromCommand(text: string) {
   return /^[A-Z0-9]{6}$/.test(normalized) ? normalized : "";
 }
 
-function parseInviteCodeFromCaption(caption: string) {
-  const match = caption.trim().match(/^([A-Z0-9]{6})\s*:\s*([\s\S]+)$/);
+export function parseInviteCodeFromCaption(caption: string) {
+  const trimmed = caption.trim();
+  const separatorIndex = trimmed.indexOf(":");
 
-  if (!match) {
-    return { description: caption.trim(), inviteCode: "" };
+  if (separatorIndex === -1) {
+    return { description: trimmed, inviteCode: "" };
+  }
+
+  const inviteCode = trimmed.slice(0, separatorIndex).trimEnd().toUpperCase();
+
+  if (!/^[A-Z0-9]{6}$/.test(inviteCode)) {
+    return { description: trimmed, inviteCode: "" };
   }
 
   return {
-    description: (match[2] ?? "").trim(),
-    inviteCode: match[1] ?? "",
+    description: trimmed.slice(separatorIndex + 1).trim(),
+    inviteCode,
   };
 }
 

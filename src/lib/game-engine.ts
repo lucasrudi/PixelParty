@@ -51,10 +51,6 @@ function createInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
-function createBindingToken() {
-  return crypto.randomUUID().replaceAll("-", "").slice(0, 20);
-}
-
 function now() {
   return new Date().toISOString();
 }

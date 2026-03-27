@@ -96,8 +96,8 @@ describe.sequential("local filesystem game flows", () => {
     expect(started.currentDay).toBe(1);
 
     const nextResponse = await nextDayRoute.POST(
-      new Request(`http://localhost/api/games/${created.gameId}/days/next`, {
-        method: "POST",
+      jsonRequest(`http://localhost/api/games/${created.gameId}/days/next`, {
+        playerId: created.hostPlayerId,
       }),
       routeContext({ gameId: created.gameId }),
     );
@@ -108,8 +108,8 @@ describe.sequential("local filesystem game flows", () => {
     expect(nextDay.status).toBe("active");
 
     const finishResponse = await finishRoute.POST(
-      new Request(`http://localhost/api/games/${created.gameId}/finish`, {
-        method: "POST",
+      jsonRequest(`http://localhost/api/games/${created.gameId}/finish`, {
+        playerId: created.hostPlayerId,
       }),
       routeContext({ gameId: created.gameId }),
     );

@@ -1073,7 +1073,10 @@ export function GameClient({
                     disabled={isPending}
                     onClick={() =>
                       startTransition(async () => {
-                        await runJsonAction(`/api/games/${game.id}/days/next`);
+                        await runJsonAction(
+                          `/api/games/${game.id}/days/next`,
+                          isHost && currentPlayer ? { playerId: currentPlayer.id } : undefined,
+                        );
                       })
                     }
                   >
@@ -1089,7 +1092,10 @@ export function GameClient({
                     disabled={isPending}
                     onClick={() =>
                       startTransition(async () => {
-                        await runJsonAction(`/api/games/${game.id}/finish`);
+                        await runJsonAction(
+                          `/api/games/${game.id}/finish`,
+                          isHost && currentPlayer ? { playerId: currentPlayer.id } : undefined,
+                        );
                       })
                     }
                   >

@@ -696,6 +696,10 @@ export function validateQuest(
     throw new Error("You cannot validate your own quest.");
   }
 
+  if (!quest.validators.includes(validatorId)) {
+    throw new Error("You are not assigned to validate this quest.");
+  }
+
   if (
     quest.validationVotes.some((vote) => vote.playerId === validatorId)
   ) {

@@ -53,7 +53,7 @@ export interface TelegramUpdate {
   message?: TelegramMessage;
 }
 
-export interface TelegramWebhookUpdate extends TelegramUpdate {}
+export type TelegramWebhookUpdate = TelegramUpdate;
 
 interface TelegramApiEnvelope<T> {
   ok?: boolean;

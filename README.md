@@ -68,6 +68,18 @@ Local environment notes:
 - `.env.local` is only needed if you want to force a specific storage mode locally
 - the simulator can stay enabled locally with the default development behavior, or explicitly with `PIXELPARTY_ENABLE_SIMULATOR=true`
 
+Generate the Telegram-only secrets yourself:
+
+```bash
+openssl rand -base64 32   # TELEGRAM_WEBHOOK_SECRET_TOKEN
+openssl rand -base64 48   # TELEGRAM_BINDING_ENCRYPTION_KEY
+```
+
+Notes:
+
+- `TELEGRAM_WEBHOOK_SECRET_TOKEN` does not come from Telegram; it is your own shared secret between Telegram webhook setup and this app
+- `TELEGRAM_BINDING_ENCRYPTION_KEY` does not come from Telegram either; this app derives its encryption key from that value to encrypt stored Telegram identifiers at rest
+
 Example local `.env.local`:
 
 ```bash
@@ -111,6 +123,7 @@ Use this when you want the normal web flow deployed for real players.
    - `TELEGRAM_BINDING_ENCRYPTION_KEY` to encrypt Telegram identifiers and hashes at rest
    - `TELEGRAM_WEBHOOK_SECRET_TOKEN` to authenticate Telegram webhook calls
    - `APP_URL` so Telegram messages can link players back into the deployed app
+   - generate `TELEGRAM_WEBHOOK_SECRET_TOKEN` and `TELEGRAM_BINDING_ENCRYPTION_KEY` yourself with a password generator or `openssl rand`; they are not issued by Telegram
 4. Register the Telegram webhook to point at `https://your-domain/api/telegram/webhook`.
 5. Keep the simulator disabled unless you explicitly want it:
    - `PIXELPARTY_ENABLE_SIMULATOR=false`
@@ -174,6 +187,42 @@ Notes:
 - the workflow writes both `TELEGRAM_BOT_USERNAME` and `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` to Vercel for production
 - the workflow also writes `TELEGRAM_WEBHOOK_SECRET_TOKEN`, `TELEGRAM_BINDING_ENCRYPTION_KEY`, `APP_URL`, and `NEXT_PUBLIC_APP_URL`
 - after changing the GitHub secrets, run the `Sync Repository Secrets To Vercel Env` workflow manually from GitHub Actions so Vercel picks up the rotated values
+
+### Rotating Telegram secrets
+
+Recommended schedule:
+
+- rotate `TELEGRAM_WEBHOOK_SECRET_TOKEN` every 90 days, or immediately if you suspect it was exposed
+- do not rotate `TELEGRAM_BINDING_ENCRYPTION_KEY` on a fixed schedule unless you also plan a binding re-encryption or reset process
+
+How to rotate `TELEGRAM_WEBHOOK_SECRET_TOKEN`:
+
+1. Generate a new value:
+
+```bash
+openssl rand -base64 32
+```
+
+2. Update the GitHub repository secret `TELEGRAM_WEBHOOK_SECRET_TOKEN`.
+3. Run the `Sync Repository Secrets To Vercel Env` workflow.
+4. Re-register the Telegram webhook with the new `secret_token`:
+
+```bash
+curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+  -d "url=$APP_URL/api/telegram/webhook" \
+  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET_TOKEN"
+```
+
+5. Confirm webhook calls still succeed against `/api/telegram/webhook`.
+
+How to rotate `TELEGRAM_BINDING_ENCRYPTION_KEY`:
+
+- treat this as a planned maintenance change, not a routine secret rotation
+- existing encrypted Telegram bindings depend on the current key-derived secret
+- if you replace it without migrating or clearing bindings, previously stored Telegram bindings will stop decrypting
+- the safe options are either:
+  - add a migration path that decrypts and re-encrypts all bindings with the new secret
+  - or clear existing Telegram bindings and require players to bind again
 
 ## Run Locally
 

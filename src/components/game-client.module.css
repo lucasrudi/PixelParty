@@ -160,6 +160,20 @@
   border: 2px solid rgba(255, 247, 230, 0.24);
 }
 
+.startActionGroup {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.startActionHint {
+  max-width: 28ch;
+  padding: 0.7rem 0.8rem;
+  line-height: 1.45;
+  color: #fff7e6;
+  background: rgba(255, 93, 61, 0.22);
+  border: 2px solid rgba(255, 196, 98, 0.48);
+}
+
 .validationMenu {
   gap: 0.9rem;
   padding: 1rem;
@@ -635,6 +649,10 @@
 
 .errorPanel {
   background: rgba(255, 226, 214, 0.96);
+}
+
+.inlineErrorPanel {
+  margin-top: 0.25rem;
 }
 
 .desktopSplitView {

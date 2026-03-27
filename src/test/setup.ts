@@ -3,6 +3,11 @@ import React from "react";
 import { afterEach, beforeAll, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 
+export const mockRouter = {
+  push: vi.fn(),
+  refresh: vi.fn(),
+};
+
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
@@ -22,6 +27,11 @@ beforeAll(() => {
     clipboard: {
       writeText: vi.fn(),
     },
+  });
+
+  Object.defineProperty(window, "confirm", {
+    writable: true,
+    value: vi.fn(() => true),
   });
 });
 
@@ -54,8 +64,5 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    refresh: vi.fn(),
-  }),
+  useRouter: () => mockRouter,
 }));

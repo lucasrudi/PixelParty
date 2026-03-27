@@ -6,6 +6,7 @@ import {
   isTelegramLoginEnabled,
   TELEGRAM_AUTH_COOKIE_NAME,
 } from "@/lib/telegram-auth";
+import { getTelegramBotUsername } from "@/lib/telegram";
 
 export default async function Home() {
   const cookieStore = await cookies();
@@ -17,6 +18,7 @@ export default async function Home() {
     <HomeClient
       showSimulatorLink={isSimulatorEnabled()}
       telegramAuth={telegramAuth}
+      telegramBotUsername={getTelegramBotUsername()}
       telegramLoginEnabled={isTelegramLoginEnabled()}
     />
   );

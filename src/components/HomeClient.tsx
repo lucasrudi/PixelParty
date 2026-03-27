@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
-import { listStoryBeats } from "@/lib/story";
 import type { TelegramAuthSession } from "@/lib/telegram-auth";
+import { listStoryBeats } from "@/lib/story";
+import { readTelegramWebAppChatId } from "@/lib/telegram-webapp";
+import type { JoinedGameSummary } from "@/lib/types";
 import styles from "./home-client.module.css";
 
 function offsetDate(days: number) {
@@ -29,21 +31,28 @@ const DEFAULT_HOST_NAME = "Fede";
 export function HomeClient({
   showSimulatorLink,
   telegramAuth,
+  telegramBotUsername,
   telegramLoginEnabled,
 }: {
   showSimulatorLink: boolean;
   telegramAuth: TelegramAuthSession | null;
+  telegramBotUsername?: string | null;
   telegramLoginEnabled: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [createError, setCreateError] = useState("");
+  const [resumeError, setResumeError] = useState("");
+  const [resumeResults, setResumeResults] = useState<JoinedGameSummary[]>([]);
+  const [searchedHandle, setSearchedHandle] = useState("");
+  const [isCreatePending, startCreateTransition] = useTransition();
+  const [isLookupPending, startLookupTransition] = useTransition();
   const linkedHandle = telegramAuth?.username ? `@${telegramAuth.username}` : "";
   const telegramAuthError = searchParams.get("telegramAuthError") ?? "";
 
   async function handleCreate(formData: FormData) {
-    setError("");
+    setCreateError("");
+    const telegramChatId = readTelegramWebAppChatId();
 
     const payload = {
       title: String(formData.get("title") ?? "").trim() || DEFAULT_GAME_TITLE,
@@ -53,6 +62,7 @@ export function HomeClient({
       hostName: String(formData.get("hostName") ?? "").trim() || DEFAULT_HOST_NAME,
       telegramHandle:
         String(formData.get("telegramHandle") ?? "").trim() || linkedHandle,
+      ...(telegramChatId ? { telegramChatId } : {}),
       accessMode: "telegram" as const,
       enabledTags: [
         formData.get("tag_alcohol") ? "alcohol" : null,
@@ -61,7 +71,7 @@ export function HomeClient({
       ].filter(Boolean),
     };
 
-    startTransition(async () => {
+    startCreateTransition(async () => {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: {
@@ -77,12 +87,48 @@ export function HomeClient({
       };
 
       if (!response.ok || !data.gameId || !data.hostPlayerId) {
-        setError(data.error ?? "Could not create the game.");
+        setCreateError(data.error ?? "Could not create the game.");
         return;
       }
 
       router.push(`/game/${data.gameId}?player=${data.hostPlayerId}`);
     });
+  }
+
+  async function handleResumeLookup(formData: FormData) {
+    const telegramHandle =
+      String(formData.get("telegramHandle") ?? "").trim() || linkedHandle;
+
+    setResumeError("");
+    setSearchedHandle(telegramHandle);
+
+    const response = await fetch(
+      `/api/games?telegramHandle=${encodeURIComponent(telegramHandle)}`,
+    );
+    const data = (await response.json()) as {
+      error?: string;
+      games?: JoinedGameSummary[];
+    };
+
+    if (!response.ok) {
+      setResumeResults([]);
+      setResumeError(data.error ?? "Could not look up your games.");
+      return;
+    }
+
+    setResumeResults(data.games ?? []);
+  }
+
+  function formatResumeState(game: JoinedGameSummary) {
+    if (game.status === "lobby") {
+      return "Lobby open";
+    }
+
+    if (game.status === "finished") {
+      return "Finished";
+    }
+
+    return `Day ${game.currentDay} of ${game.totalDays}`;
   }
 
   return (
@@ -105,7 +151,8 @@ export function HomeClient({
             ) : null}
           </div>
           <div className={styles.telegramNote}>
-            <strong>Telegram note.</strong> This MVP still renders narrator messages in-app, but you can now pre-link a real Telegram account from the website. That verified login is what removes the extra bind step later when we turn on bot DMs.
+            <strong>Telegram note.</strong> You can now pre-link a real Telegram account from the website, and players who open the Web App from Telegram can still trigger the first DM immediately through the bot flow. After that, linked players can receive the daily quest in Telegram and submit photo or video evidence there with a caption.
+            {telegramBotUsername ? ` Current bot: @${telegramBotUsername}.` : ""}
           </div>
         </div>
         <div className={styles.sceneCard}>
@@ -179,98 +226,180 @@ export function HomeClient({
 
       <section id="create" className={styles.formSection}>
         <div className={styles.sectionHeading}>
-          <p className={styles.eyebrow}>Create A Game Instance</p>
-          <h2>Open the lobby, set the trip window, and get a public join link.</h2>
+          <p className={styles.eyebrow}>Create Or Resume</p>
+          <h2>Open a new lobby or pull up every game already tied to your Telegram handle.</h2>
         </div>
-        <form
-          className={styles.formCard}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleCreate(new FormData(event.currentTarget));
-          }}
-        >
-          {telegramLoginEnabled ? (
-            <div className={styles.identityCard}>
-              <strong>
-                {telegramAuth ? "Telegram account linked" : "Link Telegram first"}
-              </strong>
-              <p>
-                {telegramAuth
-                  ? `Signed in as ${linkedHandle || telegramAuth.name}. This verified account will be used for the host identity and future bot DM permission.`
-                  : "Sign in with Telegram here to link the host to a verified Telegram account and request direct-message access without sending people back to the bot first."}
-              </p>
-              <div className={styles.identityActions}>
-                <a
-                  href={
-                    telegramAuth
-                      ? "/api/telegram/logout?returnTo=%2F%23create"
-                      : "/api/telegram/login?returnTo=%2F%23create"
-                  }
-                  className={styles.secondaryAction}
-                >
-                  {telegramAuth ? "Switch Telegram Account" : "Continue With Telegram"}
-                </a>
-              </div>
-              {telegramAuthError ? <p className={styles.error}>{telegramAuthError}</p> : null}
+        <div className={styles.formGrid}>
+          <div className={`${styles.formCard} ${styles.resumeCard}`}>
+            <div className={styles.sectionHeading}>
+              <p className={styles.eyebrow}>Resume A Game</p>
+              <h3>See every lobby or run you already joined.</h3>
             </div>
-          ) : null}
-          <label>
-            Game title
-            <input name="title" placeholder={DEFAULT_GAME_TITLE} />
-          </label>
-          <label>
-            Groom name
-            <input name="groomName" placeholder={DEFAULT_GROOM_NAME} />
-          </label>
-          <label>
-            Host name
-            <input name="hostName" placeholder={DEFAULT_HOST_NAME} />
-          </label>
-          <label>
-            Host Telegram handle
-            <input
-              name="telegramHandle"
-              placeholder="@fede"
-              defaultValue={linkedHandle}
-              readOnly={Boolean(linkedHandle)}
-              required={!telegramAuth}
-            />
-          </label>
-          {telegramAuth && !linkedHandle ? (
-            <p className={styles.fieldHint}>
-              Telegram is linked. A public `@username` is optional here and only used for display.
+            <p className={styles.summary}>
+              Enter the same Telegram handle you used when you joined. We&apos;ll list every matching game so you can jump back in without hunting for the old URL.
             </p>
-          ) : null}
-          <div className={styles.dateRow}>
-            <label>
-              Start date
-              <input name="startDate" type="date" defaultValue={offsetDate(0)} required />
-            </label>
-            <label>
-              End date
-              <input name="endDate" type="date" defaultValue={offsetDate(3)} required />
-            </label>
+            <form
+              className={styles.lookupForm}
+              onSubmit={(event) => {
+                event.preventDefault();
+                startLookupTransition(async () => {
+                  await handleResumeLookup(new FormData(event.currentTarget));
+                });
+              }}
+            >
+              <label>
+                Telegram handle
+                <input
+                  name="telegramHandle"
+                  placeholder="@luqui"
+                  defaultValue={linkedHandle}
+                  required
+                />
+              </label>
+              <button type="submit" disabled={isLookupPending}>
+                {isLookupPending ? "Looking up games..." : "Find my games"}
+              </button>
+            </form>
+            {resumeError ? <p className={styles.error}>{resumeError}</p> : null}
+            {resumeResults.length > 0 ? (
+              <div className={styles.resumeList}>
+                {resumeResults.map((game) => (
+                  <article
+                    key={`${game.gameId}:${game.playerId}`}
+                    className={styles.resumeItem}
+                  >
+                    <div className={styles.resumeMeta}>
+                      <strong>{game.title}</strong>
+                      <span>{formatResumeState(game)}</span>
+                      <span>{`${game.startDate} to ${game.endDate}`}</span>
+                      <span>{`You joined as ${game.playerName}`}</span>
+                      <span>{`Host: ${game.hostName}`}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.secondaryAction}
+                      onClick={() => {
+                        router.push(`/game/${game.gameId}?player=${game.playerId}`);
+                      }}
+                    >
+                      Resume play
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+            {searchedHandle &&
+            !resumeError &&
+            !isLookupPending &&
+            resumeResults.length === 0 ? (
+              <p className={styles.emptyState}>
+                No games found for {searchedHandle}. Join a game from an invite link first.
+              </p>
+            ) : null}
           </div>
-          <fieldset className={styles.tagFieldset}>
-            <legend>Quest spice level</legend>
-            <label className={styles.tagLabel}>
-              <input type="checkbox" name="tag_alcohol" defaultChecked />
-              Alcohol quests
+
+          <form
+            className={styles.formCard}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreate(new FormData(event.currentTarget));
+            }}
+          >
+            {telegramLoginEnabled ? (
+              <div className={styles.identityCard}>
+                <strong>
+                  {telegramAuth ? "Telegram account linked" : "Link Telegram first"}
+                </strong>
+                <p>
+                  {telegramAuth
+                    ? `Signed in as ${linkedHandle || telegramAuth.name}. This verified account can be used as your host identity and as the browser-side shortcut for future bot DMs.`
+                    : "Sign in with Telegram here to link the host to a verified Telegram account and request direct-message access without sending people back to the bot first."}
+                </p>
+                <div className={styles.identityActions}>
+                  <a
+                    href={
+                      telegramAuth
+                        ? "/api/telegram/logout?returnTo=%2F%23create"
+                        : "/api/telegram/login?returnTo=%2F%23create"
+                    }
+                    className={styles.secondaryAction}
+                  >
+                    {telegramAuth ? "Switch Telegram Account" : "Continue With Telegram"}
+                  </a>
+                </div>
+                {telegramAuthError ? (
+                  <p className={styles.error}>{telegramAuthError}</p>
+                ) : null}
+              </div>
+            ) : null}
+            <label>
+              Game title
+              <input name="title" placeholder={DEFAULT_GAME_TITLE} />
             </label>
-            <label className={styles.tagLabel}>
-              <input type="checkbox" name="tag_locuras" defaultChecked />
-              Wild dares
+            <label>
+              Groom name
+              <input name="groomName" placeholder={DEFAULT_GROOM_NAME} />
             </label>
-            <label className={styles.tagLabel}>
-              <input type="checkbox" name="tag_vegas" />
-              Vegas rules (no-filter confessions)
+            <label>
+              Host name
+              <input name="hostName" placeholder={DEFAULT_HOST_NAME} />
             </label>
-          </fieldset>
-          {error ? <p className={styles.error}>{error}</p> : null}
-          <button type="submit" disabled={isPending}>
-            {isPending ? "Opening lobby..." : "Create Telegram-Ready Game"}
-          </button>
-        </form>
+            <label>
+              Host Telegram handle
+              <input
+                name="telegramHandle"
+                placeholder="@fede"
+                defaultValue={linkedHandle}
+                readOnly={Boolean(linkedHandle)}
+                required={!telegramAuth}
+              />
+            </label>
+            {telegramAuth && !linkedHandle ? (
+              <p className={styles.fieldHint}>
+                Telegram is linked. A public `@username` is optional here and only used for display.
+              </p>
+            ) : null}
+            <div className={styles.dateRow}>
+              <label>
+                Start date
+                <input
+                  name="startDate"
+                  type="date"
+                  defaultValue={offsetDate(0)}
+                  required
+                />
+              </label>
+              <label>
+                End date
+                <input
+                  name="endDate"
+                  type="date"
+                  defaultValue={offsetDate(3)}
+                  required
+                />
+              </label>
+            </div>
+            <fieldset className={styles.tagFieldset}>
+              <legend>Quest spice level</legend>
+              <label className={styles.tagLabel}>
+                <input type="checkbox" name="tag_alcohol" defaultChecked />
+                Alcohol quests
+              </label>
+              <label className={styles.tagLabel}>
+                <input type="checkbox" name="tag_locuras" defaultChecked />
+                Wild dares
+              </label>
+              <label className={styles.tagLabel}>
+                <input type="checkbox" name="tag_vegas" />
+                Vegas rules (no-filter confessions)
+              </label>
+            </fieldset>
+            {createError ? <p className={styles.error}>{createError}</p> : null}
+            <button type="submit" disabled={isCreatePending}>
+              {isCreatePending ? "Opening lobby..." : "Create Telegram-Ready Game"}
+            </button>
+          </form>
+        </div>
       </section>
     </div>
   );

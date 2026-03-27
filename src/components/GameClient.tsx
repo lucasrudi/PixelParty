@@ -140,9 +140,15 @@ function finaleWinnerHype(game: Game, winner?: Player) {
 export function GameClient({
   game,
   currentPlayer,
+  telegramBinding,
 }: {
   game: Game;
   currentPlayer?: Player;
+  telegramBinding?: {
+    isBound: boolean;
+    bindUrl: string | null;
+    boundAt?: string;
+  };
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -168,7 +174,13 @@ export function GameClient({
   const activeBeat =
     journey[Math.max(game.currentDay - 1, 0)] ?? journey[journey.length - 1];
   const isHost = currentPlayer?.id === game.hostPlayerId;
+  const canLeaveGame = Boolean(currentPlayer && !isHost);
   const canManageGame = isHost || game.accessMode === "simulator";
+  const minimumPlayersToStart = 3;
+  const missingPlayersToStart = Math.max(minimumPlayersToStart - game.players.length, 0);
+  const cannotStartGame =
+    isHost && game.status === "lobby" && missingPlayersToStart > 0;
+  const showInlineHostError = Boolean(error) && canManageGame;
   const finaleToken = game.status === "finished" ? `${game.id}:${game.updatedAt}` : null;
   const showFinaleCinematic =
     finaleToken !== null && dismissedFinaleToken !== finaleToken;
@@ -435,6 +447,25 @@ export function GameClient({
             <span className={styles.notificationBadge}>{validationCount}</span>
           </button>
         </div>
+        {game.accessMode === "telegram" ? (
+          <div className={styles.activityPrompt}>
+            <strong>
+              {telegramBinding?.isBound
+                ? "Telegram connected"
+                : "Connect your Telegram account"}
+            </strong>
+            <p>
+              {telegramBinding?.isBound
+                ? `This player is linked for Telegram delivery${telegramBinding.boundAt ? ` since ${formatDate(telegramBinding.boundAt)}` : ""}.`
+                : "Open the bot once, then use the bind link below so future narrator messages can reach you in Telegram."}
+            </p>
+            {!telegramBinding?.isBound && telegramBinding?.bindUrl ? (
+              <a href={telegramBinding.bindUrl} target="_blank" rel="noreferrer">
+                Bind this player in Telegram
+              </a>
+            ) : null}
+          </div>
+        ) : null}
         {game.status === "active" ? (
           <form
             className={styles.form}
@@ -946,6 +977,32 @@ export function GameClient({
           <h1>{game.title}</h1>
           <p>{activeBeat.narratorLead}</p>
           <div className={styles.heroActions}>
+            {canLeaveGame && currentPlayer ? (
+              <button
+                type="button"
+                className={styles.ghostButton}
+                disabled={isPending}
+                onClick={() => {
+                  if (!window.confirm("Leave this game and clear your player slot from the roster?")) {
+                    return;
+                  }
+
+                  startTransition(async () => {
+                    await runJsonAction(
+                      `/api/games/${game.id}/players/${currentPlayer.id}`,
+                      undefined,
+                      {
+                        method: "DELETE",
+                        redirectTo:
+                          game.accessMode === "simulator" ? "/simulator" : "/",
+                      },
+                    );
+                  });
+                }}
+              >
+                Leave game
+              </button>
+            ) : null}
             <button type="button" onClick={() => void handleCopyInvite()}>
               Copy invite link
             </button>
@@ -976,17 +1033,34 @@ export function GameClient({
                   </button>
                 ) : null}
                 {isHost && game.status === "lobby" ? (
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() =>
-                      startTransition(async () => {
-                        await runJsonAction(`/api/games/${game.id}/start`);
-                      })
-                    }
-                  >
-                    Start game and trigger day 1
-                  </button>
+                  <div className={styles.startActionGroup}>
+                    <button
+                      type="button"
+                      disabled={isPending || cannotStartGame}
+                      aria-describedby={
+                        cannotStartGame ? "start-game-minimum-players" : undefined
+                      }
+                      onClick={() =>
+                        startTransition(async () => {
+                          await runJsonAction(`/api/games/${game.id}/start`);
+                        })
+                      }
+                    >
+                      Start game and trigger day 1
+                    </button>
+                    {cannotStartGame ? (
+                      <p
+                        id="start-game-minimum-players"
+                        className={styles.startActionHint}
+                        role="status"
+                      >
+                        Need at least 3 players to start.{" "}
+                        {missingPlayersToStart === 1
+                          ? "1 more player needs to join."
+                          : `${missingPlayersToStart} more players need to join.`}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
                 {isHost && game.status === "active" ? (
                   <button
@@ -1069,6 +1143,12 @@ export function GameClient({
                   </button>
                 ) : null}
               </div>
+              {showInlineHostError ? (
+                <article className={`${styles.errorPanel} ${styles.inlineErrorPanel}`}>
+                  <strong>Action blocked</strong>
+                  <p>{error}</p>
+                </article>
+              ) : null}
             </div>
           ) : null}
           <div className={styles.heroMeta}>
@@ -1095,7 +1175,7 @@ export function GameClient({
 
         <section className={styles.feedRail}>
           {renderNarratorFeed(currentPlayer, visibleMessages)}
-          {error ? (
+          {error && !showInlineHostError ? (
             <article className={styles.errorPanel}>
               <strong>Action blocked</strong>
               <p>{error}</p>
@@ -1115,7 +1195,7 @@ export function GameClient({
             {renderTripMap()}
             {renderRoster()}
           </div>
-          {error ? (
+          {error && !showInlineHostError ? (
             <article className={styles.errorPanel}>
               <strong>Action blocked</strong>
               <p>{error}</p>

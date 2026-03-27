@@ -1,0 +1,96 @@
+name: Sync Repository Secrets To Vercel Env
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync_env_variables.yml"
+
+jobs:
+  sync-telegram-env:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
+      TELEGRAM_WEBHOOK_SECRET_TOKEN: ${{ secrets.TELEGRAM_WEBHOOK_SECRET_TOKEN }}
+      TELEGRAM_BINDING_ENCRYPTION_KEY: ${{ secrets.TELEGRAM_BINDING_ENCRYPTION_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Validate required secrets
+        run: |
+          test -n "$TELEGRAM_BOT_TOKEN"
+          test -n "$VERCEL_PROJECT_ID"
+          test -n "$VERCEL_TOKEN"
+
+      - name: Upsert repository secrets on Vercel
+        run: |
+          node <<'NODE'
+          const required = ["VERCEL_PROJECT_ID", "VERCEL_TOKEN", "TELEGRAM_BOT_TOKEN"];
+          for (const key of required) {
+            if (!process.env[key]) {
+              throw new Error(`Missing required secret: ${key}`);
+            }
+          }
+
+          const teamId = process.env.VERCEL_TEAM_ID?.trim();
+          const query = new URLSearchParams({ upsert: "true" });
+          if (teamId) {
+            query.set("teamId", teamId);
+          }
+
+          const endpoint =
+            `https://api.vercel.com/v10/projects/${process.env.VERCEL_PROJECT_ID}/env?${query.toString()}`;
+
+          async function upsert(key, value, type) {
+            if (!value) {
+              return;
+            }
+
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                key,
+                value,
+                type,
+                target: ["production"],
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                `Could not upsert ${key} on Vercel: ${response.status} ${await response.text()}`,
+              );
+            }
+          }
+
+          await upsert("TELEGRAM_BOT_TOKEN", process.env.TELEGRAM_BOT_TOKEN, "sensitive");
+          await upsert("TELEGRAM_BOT_USERNAME", process.env.TELEGRAM_BOT_USERNAME, "plain");
+          await upsert(
+            "NEXT_PUBLIC_TELEGRAM_BOT_USERNAME",
+            process.env.TELEGRAM_BOT_USERNAME,
+            "plain",
+          );
+          await upsert(
+            "TELEGRAM_WEBHOOK_SECRET_TOKEN",
+            process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN,
+            "sensitive",
+          );
+          await upsert(
+            "TELEGRAM_BINDING_ENCRYPTION_KEY",
+            process.env.TELEGRAM_BINDING_ENCRYPTION_KEY,
+            "sensitive",
+          );
+          await upsert("APP_URL", process.env.APP_URL, "plain");
+          await upsert("NEXT_PUBLIC_APP_URL", process.env.APP_URL, "plain");
+          NODE

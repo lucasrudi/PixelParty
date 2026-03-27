@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { joinGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
+import { logServerWarning } from "@/lib/server-log";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
 import {
@@ -9,7 +10,8 @@ import {
   getTelegramSession,
   TELEGRAM_AUTH_COOKIE_NAME,
 } from "@/lib/telegram-auth";
-import { JoinGameInput } from "@/lib/types";
+import { notifyPlayerOfLobbyLink } from "@/lib/telegram";
+import type { JoinGameInput } from "@/lib/types";
 
 export async function POST(
   request: Request,
@@ -27,6 +29,7 @@ export async function POST(
         body.telegramHandle?.trim() || getTelegramHandleFromSession(telegramSession),
       telegramUserId: telegramSession?.id ?? body.telegramUserId,
       telegramVerifiedAt: telegramSession?.verifiedAt ?? body.telegramVerifiedAt,
+      telegramChatId: body.telegramChatId ?? telegramSession?.id,
     };
     let joinedPlayerId = "";
 
@@ -39,6 +42,17 @@ export async function POST(
       joinedPlayerId = result.player.id;
       return result.game;
     });
+    const joinedPlayer = game.players.find((player) => player.id === joinedPlayerId);
+
+    if (game.accessMode === "telegram" && joinedPlayer) {
+      await notifyPlayerOfLobbyLink(game, joinedPlayer, "joined").catch((error) =>
+        logServerWarning("telegram.lobby-link", error, {
+          event: "joined",
+          gameId: game.id,
+          playerId: joinedPlayer.id,
+        }),
+      );
+    }
 
     return NextResponse.json({
       gameId: game.id,

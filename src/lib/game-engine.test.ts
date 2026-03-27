@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createGame, joinGame, resetGame, validateQuest } from "@/lib/game-engine";
+import {
+  createGame,
+  joinGame,
+  leaveGame,
+  resetGame,
+  validateQuest,
+} from "@/lib/game-engine";
 import {
   buildStartedSimulatorGame,
   buildStartedTelegramGame,
@@ -118,6 +124,48 @@ describe("game validation flow", () => {
         note: "Self-approved",
       }),
     ).toThrow("cannot validate your own quest");
+  });
+
+  it("lets a non-host player leave and removes their active progress", () => {
+    const { game, mauri } = buildStartedTelegramGame();
+
+    const updatedGame = leaveGame(game, mauri.id);
+
+    expect(updatedGame.players.some((player) => player.id === mauri.id)).toBe(false);
+    expect(updatedGame.quests.some((quest) => quest.playerId === mauri.id)).toBe(false);
+    expect(updatedGame.messages.at(-1)?.title).toBe("Party member left");
+  });
+
+  it("blocks the host from leaving the game", () => {
+    const { game, host } = buildStartedTelegramGame();
+
+    expect(() => leaveGame(game, host.id)).toThrow(
+      "The host cannot leave the game. Delete the game instead.",
+    );
+  });
+
+  it("stores Telegram chat ids captured from Telegram WebApp", () => {
+    const game = createGame({
+      title: "Weekend of Bad Decisions",
+      groomName: "Tincho",
+      hostName: "Fede",
+      telegramHandle: "@fede",
+      telegramChatId: "1001",
+      startDate: "2026-03-25",
+      endDate: "2026-03-27",
+      accessMode: "telegram",
+    });
+
+    const { player } = joinGame(game, {
+      name: "Luqui",
+      telegramHandle: "@luqui",
+      telegramChatId: "2002",
+    });
+
+    expect(game.players.find((entry) => entry.id === game.hostPlayerId)?.telegramChatId).toBe(
+      "1001",
+    );
+    expect(player.telegramChatId).toBe("2002");
   });
 
   it("resets a game back to the lobby while keeping the roster", () => {

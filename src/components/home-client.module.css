@@ -186,6 +186,13 @@
   gap: 1.3rem;
 }
 
+.formGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(18rem, 0.85fr) minmax(0, 1.15fr);
+  align-items: start;
+}
+
 .sectionHeading {
   display: grid;
   gap: 0.55rem;
@@ -227,10 +234,31 @@
 .formCard {
   display: grid;
   gap: 1rem;
-  max-width: 48rem;
   padding: 1.4rem;
   background: rgba(17, 23, 43, 0.94);
   color: #fff6df;
+}
+
+.resumeCard {
+  background: linear-gradient(180deg, rgba(255, 248, 233, 0.97), rgba(255, 228, 182, 0.96));
+  color: #141a33;
+}
+
+.resumeCard .summary,
+.resumeMeta span,
+.emptyState {
+  color: #28304b;
+}
+
+.resumeCard .eyebrow,
+.resumeCard h3 {
+  color: #141a33;
+}
+
+.resumeCard h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.1;
 }
 
 .formCard label {
@@ -246,6 +274,47 @@
   color: #fff6df;
   background: rgba(255, 255, 255, 0.08);
   border: 2px solid rgba(255, 246, 223, 0.28);
+}
+
+.resumeCard input {
+  color: #141a33;
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(20, 26, 51, 0.22);
+}
+
+.lookupForm,
+.resumeList,
+.resumeMeta {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.resumeItem {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.62);
+  border: 2px solid rgba(20, 26, 51, 0.22);
+}
+
+.resumeMeta strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: #141a33;
+}
+
+.resumeMeta span {
+  width: fit-content;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(20, 26, 51, 0.08);
+  border: 1px solid rgba(20, 26, 51, 0.14);
+}
+
+.emptyState {
+  line-height: 1.5;
 }
 
 .dateRow {
@@ -290,6 +359,7 @@
 
 @media (max-width: 900px) {
   .hero,
+  .formGrid,
   .strip,
   .dateRow {
     grid-template-columns: 1fr;

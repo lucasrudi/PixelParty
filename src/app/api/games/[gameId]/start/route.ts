@@ -3,6 +3,7 @@ import { startGame } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
+import { notifyPlayersOfCurrentDay } from "@/lib/telegram";
 
 export async function POST(
   _request: Request,
@@ -17,6 +18,9 @@ export async function POST(
 
       return startGame(current);
     });
+
+    await notifyPlayersOfCurrentDay(game.id);
+
     return NextResponse.json({ ok: true, gameId: game.id, currentDay: game.currentDay });
   } catch (error) {
     return jsonError(error);

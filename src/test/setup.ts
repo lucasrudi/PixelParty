@@ -37,6 +37,7 @@ beforeAll(() => {
 
 afterEach(() => {
   cleanup();
+  delete (window as Window & { Telegram?: unknown }).Telegram;
   vi.clearAllMocks();
 });
 

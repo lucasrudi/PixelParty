@@ -3,6 +3,7 @@ import { submitEvidence } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { updateGame } from "@/lib/store";
+import { deliverTelegramReadyMessages } from "@/lib/telegram-delivery";
 import { saveBrowserFile } from "@/lib/uploads";
 
 export async function POST(
@@ -40,6 +41,7 @@ export async function POST(
       });
     });
 
+    await deliverTelegramReadyMessages(game.id);
     return NextResponse.json({ ok: true, gameId: game.id, questId });
   } catch (error) {
     return jsonError(error);

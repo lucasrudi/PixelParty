@@ -67,6 +67,8 @@ export interface Player {
   telegramHandle: string;
   telegramUserId?: string;
   telegramVerifiedAt?: string;
+  telegramBindingToken?: string;
+  telegramChatId?: string;
   joinedAt: string;
   points: number;
   avatarKey: string;
@@ -93,6 +95,7 @@ export interface GameMessage {
   title: string;
   body: string;
   createdAt: string;
+  telegramDeliveredTo?: string[];
 }
 
 export interface FinaleCard {
@@ -102,6 +105,22 @@ export interface FinaleCard {
 }
 
 export type QuestTagToggle = "alcohol" | "locuras" | "vegas";
+
+export interface JoinedGameSummary {
+  accessMode: AccessMode;
+  currentDay: number;
+  endDate: string;
+  gameId: string;
+  hostName: string;
+  joinedAt: string;
+  playerId: string;
+  playerName: string;
+  startDate: string;
+  status: GameStatus;
+  title: string;
+  totalDays: number;
+  updatedAt: string;
+}
 
 export interface Game {
   id: string;
@@ -135,6 +154,7 @@ export interface CreateGameInput {
   telegramHandle?: string;
   telegramUserId?: string;
   telegramVerifiedAt?: string;
+  telegramChatId?: string;
   accessMode: AccessMode;
   enabledTags?: QuestTagToggle[];
 }
@@ -144,6 +164,7 @@ export interface JoinGameInput {
   telegramHandle?: string;
   telegramUserId?: string;
   telegramVerifiedAt?: string;
+  telegramChatId?: string;
 }
 
 export interface SubmitActivityInput {

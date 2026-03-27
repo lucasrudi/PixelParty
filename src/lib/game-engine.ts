@@ -51,6 +51,10 @@ function createInviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function createBindingToken() {
+  return crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+}
+
 function now() {
   return new Date().toISOString();
 }
@@ -63,7 +67,7 @@ function toTitleCase(value: string) {
     .join(" ");
 }
 
-function sanitizeTelegramHandle(value?: string) {
+export function normalizeTelegramHandle(value?: string) {
   const normalized = value?.trim().replace(/^@/, "") ?? "";
   return normalized ? `@${normalized}` : "";
 }
@@ -73,13 +77,20 @@ function sanitizeTelegramUserId(value?: string) {
   return normalized || "";
 }
 
+function sanitizeTelegramChatId(value?: string) {
+  const normalized = value?.trim() ?? "";
+  return /^\d+$/.test(normalized) ? normalized : "";
+}
+
 function hasTelegramIdentity(input: {
+  telegramChatId?: string;
   telegramHandle?: string;
   telegramUserId?: string;
 }) {
   return Boolean(
-    sanitizeTelegramHandle(input.telegramHandle) ||
-      sanitizeTelegramUserId(input.telegramUserId),
+    normalizeTelegramHandle(input.telegramHandle) ||
+      sanitizeTelegramUserId(input.telegramUserId) ||
+      sanitizeTelegramChatId(input.telegramChatId),
   );
 }
 
@@ -128,6 +139,7 @@ function createPlayer(
   telegramHandle: string,
   telegramUserId: string | undefined,
   telegramVerifiedAt: string | undefined,
+  telegramChatId: string,
   usedAvatars: string[],
   isHost: boolean,
 ): Player {
@@ -136,9 +148,11 @@ function createPlayer(
   return {
     id: createId("player"),
     name: toTitleCase(name.trim()),
-    telegramHandle: sanitizeTelegramHandle(telegramHandle),
+    telegramHandle: normalizeTelegramHandle(telegramHandle),
     telegramUserId: sanitizedTelegramUserId || undefined,
     telegramVerifiedAt,
+    telegramBindingToken: createBindingToken(),
+    telegramChatId: sanitizeTelegramChatId(telegramChatId) || undefined,
     joinedAt: now(),
     points: 0,
     avatarKey: selectAvatar(usedAvatars),
@@ -307,6 +321,7 @@ export function createGame(input: CreateGameInput): Game {
     input.telegramHandle ?? "",
     input.telegramUserId,
     input.telegramVerifiedAt,
+    input.telegramChatId ?? "",
     [],
     true,
   );
@@ -367,6 +382,7 @@ export function joinGame(game: Game, input: JoinGameInput) {
 
   const normalizedName = input.name.trim().toLowerCase();
   const sanitizedTelegramUserId = sanitizeTelegramUserId(input.telegramUserId);
+  const sanitizedTelegramChatId = sanitizeTelegramChatId(input.telegramChatId);
 
   if (game.players.some((player) => player.name.toLowerCase() === normalizedName)) {
     throw new Error("That player name is already in the party.");
@@ -379,11 +395,19 @@ export function joinGame(game: Game, input: JoinGameInput) {
     throw new Error("That Telegram account is already linked to this party.");
   }
 
+  if (
+    sanitizedTelegramChatId &&
+    game.players.some((player) => player.telegramChatId === sanitizedTelegramChatId)
+  ) {
+    throw new Error("That Telegram chat is already linked to this party.");
+  }
+
   const player = createPlayer(
     input.name,
     input.telegramHandle ?? "",
     input.telegramUserId,
     input.telegramVerifiedAt,
+    input.telegramChatId ?? "",
     game.players.map((member) => member.avatarKey),
     false,
   );
@@ -400,6 +424,34 @@ export function joinGame(game: Game, input: JoinGameInput) {
 
   game.updatedAt = now();
   return { game, player };
+}
+
+export function leaveGame(game: Game, playerId: string) {
+  const player = game.players.find((entry) => entry.id === playerId);
+
+  if (!player) {
+    throw new Error("Player not found.");
+  }
+
+  if (player.id === game.hostPlayerId) {
+    throw new Error("The host cannot leave the game. Delete the game instead.");
+  }
+
+  game.players = game.players.filter((entry) => entry.id !== playerId);
+  game.quests = game.quests.filter((quest) => quest.playerId !== playerId);
+  game.finaleCards = game.finaleCards.filter((card) => card.playerId !== playerId);
+
+  addMessages(game, [
+    createMessage(
+      "Party member left",
+      `${player.name} left the game and their active progress was cleared from the roster.`,
+      "all",
+      "timeline",
+    ),
+  ]);
+
+  game.updatedAt = now();
+  return game;
 }
 
 export function startGame(game: Game) {

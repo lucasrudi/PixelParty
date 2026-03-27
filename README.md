@@ -16,45 +16,87 @@ Pixel-art multiplayer bachelor-party WebApp inspired by the original `tincho-en-
 - A final scoreboard with player titles and an epic wrap-up
 - A `/simulator` route where players can join using names only and test the full lifecycle locally
 
-## Important Telegram Constraint
+## Telegram Setup
 
-This project stores Telegram handles and creates Telegram-ready messages in the game feed, but it does not yet push real Telegram bot DMs. Telegram bots cannot reliably message users from just a username; each player must start the bot once so the app can bind the handle to a chat ID.
+### Important constraint
 
-## Telegram Server Setup
+This project is Telegram-ready, not Telegram-delivered.
 
-If you want to run the Telegram-ready version in production today, the app server setup is simple because the current codebase does not yet talk directly to the Telegram Bot API.
+Today the app:
 
-### What the server needs today
+- stores Telegram handles for the main web flow
+- renders narrator messages in a Telegram-ready format inside the app
+- does not yet call the Telegram Bot API directly
 
-1. Deploy the Next.js app behind HTTPS.
-2. Pick one persistence strategy:
-   - zero-config local storage with `.data/games.json` and `public/uploads/`
-   - external storage with Postgres for game state and Blob for uploaded proof media
-3. Expose the public app URL so players can open the web experience and join games.
+That means the current app does not require a bot token, webhook, or polling worker to run. Players still need to use their real Telegram handles consistently, and if you want a Telegram bot to open the Web App you configure that around the app, not inside the current codebase.
 
-### Telegram setup around the app
+### Local Telegram-ready setup
+
+Use this when you want to test the real web flow on your machine instead of the `/simulator` route.
+
+1. Start the app locally:
+
+```bash
+npm install
+npm run dev
+```
+
+2. Open [http://localhost:3000](http://localhost:3000).
+3. Create a game from `/` using the normal Telegram-ready form.
+4. Enter real-looking Telegram handles such as `@fede`, `@mauri`, and `@seba` when creating and joining players.
+5. Share the local invite link manually with anyone else testing on the same network, or just open the join page yourself in another browser session.
+
+Optional local bot setup:
 
 1. Create a bot with BotFather.
-2. Ask every player to start the bot once in Telegram.
-3. If you want the bot to open this web app, configure the bot menu or button to point to your deployed HTTPS URL.
-4. Have players enter the same Telegram handle they use in Telegram when joining the non-simulator flow.
+2. Ask testers to start the bot once in Telegram.
+3. If you want Telegram to open the local Web App, expose your local app through an HTTPS tunnel such as `ngrok`, `Cloudflare Tunnel`, or similar.
+4. Point the bot menu button or Web App button at that public HTTPS tunnel URL.
 
-### What is not wired yet
+Local environment notes:
 
-- The app does not currently read a Telegram bot token from the server.
-- The app does not currently register a Telegram webhook or run polling.
-- The app does not currently store Telegram chat IDs.
-- The app does not currently send real Telegram DMs; it only creates Telegram-ready narrator messages inside the app feed.
+- no Telegram-specific environment variable is required today
+- `.env.local` is only needed if you want to force a specific storage mode locally
+- the simulator can stay enabled locally with the default development behavior, or explicitly with `PIXELPARTY_ENABLE_SIMULATOR=true`
 
-### What you will need when bot delivery is implemented
+Example local `.env.local`:
 
-When the Telegram integration is added, the production server will need:
+```bash
+PIXELPARTY_GAME_STORAGE=filesystem
+PIXELPARTY_UPLOAD_STORAGE=filesystem
+PIXELPARTY_ENABLE_SIMULATOR=true
+```
 
-- a Telegram bot token in environment variables
-- a webhook endpoint or polling worker
-- persistent mapping between Telegram users and chat IDs
-- bot commands or deep links so players can bind their Telegram account to the game
-- HTTPS on the public domain used by the webhook and the Web App
+### Production Telegram-ready setup
+
+Use this when you want the normal web flow deployed for real players.
+
+1. Deploy the Next.js app behind HTTPS.
+2. Configure persistent storage:
+   - `POSTGRES_URL` or `DATABASE_URL` for game state
+   - `BLOB_READ_WRITE_TOKEN` for uploaded evidence
+3. Keep the simulator disabled unless you explicitly want it:
+   - `PIXELPARTY_ENABLE_SIMULATOR=false`
+4. Create a bot with BotFather if you want Telegram to be the entrypoint into the web app.
+5. Ask every player to start the bot once in Telegram.
+6. Point the bot menu button, deep link, or Web App button at your deployed HTTPS app URL.
+7. Require players to enter the same Telegram handle they use in Telegram when they join the non-simulator flow.
+
+Example hosted configuration:
+
+```bash
+POSTGRES_URL=postgres://user:password@host:5432/pixelparty
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx
+PIXELPARTY_ENABLE_SIMULATOR=false
+```
+
+Production behavior today:
+
+- the app itself still does not read a Telegram bot token
+- the app still does not register a Telegram webhook or run polling
+- the app still does not store Telegram chat IDs
+- the app still does not send real Telegram DMs
+- Telegram is currently used as identity context and optional app entrypoint, not as a live delivery channel
 
 ## Run Locally
 

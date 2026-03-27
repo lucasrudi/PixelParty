@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/route-response";
+import { logServerWarning } from "@/lib/server-log";
 import {
   bindTelegramPlayer,
   deliverTelegramReadyMessages,
@@ -73,7 +74,14 @@ export async function POST(request: Request) {
         telegramUserId: String(message.from.id),
         telegramUsername: username,
       });
-      await linkTelegramChat(username, chatId).catch(() => undefined);
+      await linkTelegramChat(username, chatId).catch((error) =>
+        logServerWarning("telegram.bind.link-chat", error, {
+          chatId,
+          gameId: resolved.game.id,
+          playerId: resolved.player.id,
+          username,
+        }),
+      );
 
       const playerUrl = getAppBaseUrl()
         ? `${getAppBaseUrl()}/game/${resolved.game.id}?player=${resolved.player.id}`
@@ -115,7 +123,13 @@ export async function POST(request: Request) {
         chatId,
         `Linked this chat to ${linkedGames.length} PixelParty game${linkedGames.length === 1 ? "" : "s"}. Send /today any time to get your current quest.`,
       );
-      await sendTodayQuestForChat(chatId, username).catch(() => undefined);
+      await sendTodayQuestForChat(chatId, username).catch((error) =>
+        logServerWarning("telegram.command.today", error, {
+          chatId,
+          command: "/start",
+          username,
+        }),
+      );
 
       return NextResponse.json({ ok: true });
     }

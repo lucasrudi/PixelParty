@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createGame, normalizeTelegramHandle } from "@/lib/game-engine";
 import { jsonError } from "@/lib/route-response";
+import { logServerWarning } from "@/lib/server-log";
 import { assertSimulatorEnabled } from "@/lib/storage-config";
 import { listGamesForTelegramHandle, saveGame } from "@/lib/store";
 import { notifyPlayerOfLobbyLink } from "@/lib/telegram";
@@ -61,7 +62,13 @@ export async function POST(request: Request) {
     const host = game.players.find((player) => player.id === game.hostPlayerId);
 
     if (game.accessMode === "telegram" && host) {
-      await notifyPlayerOfLobbyLink(game, host, "created").catch(() => undefined);
+      await notifyPlayerOfLobbyLink(game, host, "created").catch((error) =>
+        logServerWarning("telegram.lobby-link", error, {
+          event: "created",
+          gameId: game.id,
+          playerId: host.id,
+        }),
+      );
     }
 
     return NextResponse.json({

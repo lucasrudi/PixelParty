@@ -41,19 +41,32 @@ describe("telegram bot route", () => {
       TELEGRAM_BOT_USERNAME: "pixelparty_bot",
     };
 
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          ok: true,
-          result: {
-            id: 123456,
-            is_bot: true,
-            first_name: "Pixel Party",
-            username: "pixelparty_live_bot",
-          },
-        }),
-      ),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              id: 123456,
+              is_bot: true,
+              first_name: "Pixel Party",
+              username: "pixelparty_live_bot",
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              url: "https://pixelparty.example.com/api/telegram/webhook",
+              pending_update_count: 0,
+            },
+          }),
+        ),
+      );
 
     vi.stubGlobal("fetch", fetchMock);
     vi.resetModules();
@@ -68,6 +81,10 @@ describe("telegram bot route", () => {
         id: number;
         username?: string;
       };
+      webhook?: {
+        url?: string;
+        pending_update_count?: number;
+      };
     };
 
     expect(response.status).toBe(200);
@@ -75,8 +92,20 @@ describe("telegram bot route", () => {
     expect(payload.username).toBe("pixelparty_live_bot");
     expect(payload.botUrl).toBe("https://t.me/pixelparty_live_bot");
     expect(payload.profile?.id).toBe(123456);
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(payload.webhook).toEqual({
+      url: "https://pixelparty.example.com/api/telegram/webhook",
+      pending_update_count: 0,
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
       "https://api.telegram.org/bot123456:test-token/getMe",
+      {
+        cache: "no-store",
+      },
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://api.telegram.org/bot123456:test-token/getWebhookInfo",
       {
         cache: "no-store",
       },

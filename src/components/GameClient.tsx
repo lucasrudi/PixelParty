@@ -169,6 +169,11 @@ export function GameClient({
     journey[Math.max(game.currentDay - 1, 0)] ?? journey[journey.length - 1];
   const isHost = currentPlayer?.id === game.hostPlayerId;
   const canManageGame = isHost || game.accessMode === "simulator";
+  const minimumPlayersToStart = 3;
+  const missingPlayersToStart = Math.max(minimumPlayersToStart - game.players.length, 0);
+  const cannotStartGame =
+    isHost && game.status === "lobby" && missingPlayersToStart > 0;
+  const showInlineHostError = Boolean(error) && canManageGame;
   const finaleToken = game.status === "finished" ? `${game.id}:${game.updatedAt}` : null;
   const showFinaleCinematic =
     finaleToken !== null && dismissedFinaleToken !== finaleToken;
@@ -974,17 +979,34 @@ export function GameClient({
                   </button>
                 ) : null}
                 {isHost && game.status === "lobby" ? (
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() =>
-                      startTransition(async () => {
-                        await runJsonAction(`/api/games/${game.id}/start`);
-                      })
-                    }
-                  >
-                    Start game and trigger day 1
-                  </button>
+                  <div className={styles.startActionGroup}>
+                    <button
+                      type="button"
+                      disabled={isPending || cannotStartGame}
+                      aria-describedby={
+                        cannotStartGame ? "start-game-minimum-players" : undefined
+                      }
+                      onClick={() =>
+                        startTransition(async () => {
+                          await runJsonAction(`/api/games/${game.id}/start`);
+                        })
+                      }
+                    >
+                      Start game and trigger day 1
+                    </button>
+                    {cannotStartGame ? (
+                      <p
+                        id="start-game-minimum-players"
+                        className={styles.startActionHint}
+                        role="status"
+                      >
+                        Need at least 3 players to start.{" "}
+                        {missingPlayersToStart === 1
+                          ? "1 more player needs to join."
+                          : `${missingPlayersToStart} more players need to join.`}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
                 {isHost && game.status === "active" ? (
                   <button
@@ -1067,6 +1089,12 @@ export function GameClient({
                   </button>
                 ) : null}
               </div>
+              {showInlineHostError ? (
+                <article className={`${styles.errorPanel} ${styles.inlineErrorPanel}`}>
+                  <strong>Action blocked</strong>
+                  <p>{error}</p>
+                </article>
+              ) : null}
             </div>
           ) : null}
           <div className={styles.heroMeta}>
@@ -1093,7 +1121,7 @@ export function GameClient({
 
         <section className={styles.feedRail}>
           {renderNarratorFeed(currentPlayer, visibleMessages)}
-          {error ? (
+          {error && !showInlineHostError ? (
             <article className={styles.errorPanel}>
               <strong>Action blocked</strong>
               <p>{error}</p>
@@ -1113,7 +1141,7 @@ export function GameClient({
             {renderTripMap()}
             {renderRoster()}
           </div>
-          {error ? (
+          {error && !showInlineHostError ? (
             <article className={styles.errorPanel}>
               <strong>Action blocked</strong>
               <p>{error}</p>

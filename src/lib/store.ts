@@ -23,7 +23,78 @@ interface GameRow {
   invite_code: string;
   created_at: string;
   updated_at: string;
-  payload: Game;
+  payload: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseGamePayload(payload: unknown) {
+  if (typeof payload === "string") {
+    return JSON.parse(payload) as unknown;
+  }
+
+  return payload;
+}
+
+export function hydrateGame(payload: unknown): Game {
+  const parsedPayload = parseGamePayload(payload);
+
+  if (!isRecord(parsedPayload)) {
+    throw new Error("Stored game payload is invalid.");
+  }
+
+  const baseGame = parsedPayload as unknown as Game;
+
+  const players = Array.isArray(parsedPayload.players)
+    ? parsedPayload.players.map((player) =>
+        isRecord(player)
+          ? {
+              ...player,
+              activities: Array.isArray(player.activities) ? player.activities : [],
+            }
+          : player,
+      )
+    : [];
+  const quests = Array.isArray(parsedPayload.quests)
+    ? parsedPayload.quests.map((quest) =>
+        isRecord(quest)
+          ? {
+              ...quest,
+              validators: Array.isArray(quest.validators) ? quest.validators : [],
+              validationVotes: Array.isArray(quest.validationVotes)
+                ? quest.validationVotes
+                : [],
+            }
+          : quest,
+      )
+    : [];
+
+  return {
+    ...baseGame,
+    players: players as Game["players"],
+    quests: quests as Game["quests"],
+    messages: Array.isArray(parsedPayload.messages)
+      ? (parsedPayload.messages as Game["messages"])
+      : [],
+    finaleCards: Array.isArray(parsedPayload.finaleCards)
+      ? (parsedPayload.finaleCards as Game["finaleCards"])
+      : [],
+  };
+}
+
+function hydrateStorePayload(store: unknown): StoreShape {
+  const rawGames = isRecord(store) && isRecord(store.games) ? store.games : {};
+
+  return {
+    games: Object.fromEntries(
+      Object.entries(rawGames).map(([gameId, payload]) => {
+        const game = hydrateGame(payload);
+        return [game.id || gameId, game];
+      }),
+    ),
+  };
 }
 
 function getSqlClient() {
@@ -88,7 +159,7 @@ async function ensureStore() {
 async function readFilesystemStore(): Promise<StoreShape> {
   await ensureStore();
   const raw = await fs.readFile(STORE_FILE, "utf8");
-  return JSON.parse(raw) as StoreShape;
+  return hydrateStorePayload(JSON.parse(raw) as unknown);
 }
 
 async function writeFilesystemStore(store: StoreShape) {
@@ -107,9 +178,11 @@ async function runExclusive<T>(operation: () => Promise<T>) {
   return next;
 }
 
-function mapGamesToStore(games: Game[]): StoreShape {
+function mapGamesToStore(games: unknown[]): StoreShape {
+  const hydratedGames = games.map((game) => hydrateGame(game));
+
   return {
-    games: Object.fromEntries(games.map((game) => [game.id, game])),
+    games: Object.fromEntries(hydratedGames.map((game) => [game.id, game])),
   };
 }
 
@@ -185,7 +258,7 @@ export async function listGames() {
       from games
       order by created_at desc
     `;
-    return rows.map((row) => row.payload);
+    return rows.map((row) => hydrateGame(row.payload));
   }
 
   const store = await readFilesystemStore();
@@ -204,7 +277,7 @@ export async function getGame(gameId: string) {
       where id = ${gameId}
       limit 1
     `;
-    return rows[0]?.payload;
+    return rows[0] ? hydrateGame(rows[0].payload) : undefined;
   }
 
   const store = await readFilesystemStore();
@@ -221,7 +294,7 @@ export async function getGameByInvite(inviteCode: string) {
       where lower(invite_code) = lower(${inviteCode})
       limit 1
     `;
-    return rows[0]?.payload;
+    return rows[0] ? hydrateGame(rows[0].payload) : undefined;
   }
 
   const store = await readFilesystemStore();
@@ -276,7 +349,7 @@ export async function updateGame(
         where id = ${gameId}
         for update
       `;
-      const game = rows[0]?.payload;
+      const game = rows[0] ? hydrateGame(rows[0].payload) : undefined;
 
       if (!game) {
         throw new Error("Game not found.");

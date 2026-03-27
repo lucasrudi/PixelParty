@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { listStoryBeats } from "@/lib/story";
+import type { JoinedGameSummary } from "@/lib/types";
 import styles from "./home-client.module.css";
 
 function offsetDate(days: number) {
@@ -35,11 +36,15 @@ export function HomeClient({
   telegramBotUsername?: string | null;
 }) {
   const router = useRouter();
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [createError, setCreateError] = useState("");
+  const [resumeError, setResumeError] = useState("");
+  const [resumeResults, setResumeResults] = useState<JoinedGameSummary[]>([]);
+  const [searchedHandle, setSearchedHandle] = useState("");
+  const [isCreatePending, startCreateTransition] = useTransition();
+  const [isLookupPending, startLookupTransition] = useTransition();
 
   async function handleCreate(formData: FormData) {
-    setError("");
+    setCreateError("");
 
     const payload = {
       title: String(formData.get("title") ?? "").trim() || DEFAULT_GAME_TITLE,
@@ -56,7 +61,7 @@ export function HomeClient({
       ].filter(Boolean),
     };
 
-    startTransition(async () => {
+    startCreateTransition(async () => {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: {
@@ -72,12 +77,47 @@ export function HomeClient({
       };
 
       if (!response.ok || !data.gameId || !data.hostPlayerId) {
-        setError(data.error ?? "Could not create the game.");
+        setCreateError(data.error ?? "Could not create the game.");
         return;
       }
 
       router.push(`/game/${data.gameId}?player=${data.hostPlayerId}`);
     });
+  }
+
+  async function handleResumeLookup(formData: FormData) {
+    const telegramHandle = String(formData.get("telegramHandle") ?? "").trim();
+
+    setResumeError("");
+    setSearchedHandle(telegramHandle);
+
+    const response = await fetch(
+      `/api/games?telegramHandle=${encodeURIComponent(telegramHandle)}`,
+    );
+    const data = (await response.json()) as {
+      error?: string;
+      games?: JoinedGameSummary[];
+    };
+
+    if (!response.ok) {
+      setResumeResults([]);
+      setResumeError(data.error ?? "Could not look up your games.");
+      return;
+    }
+
+    setResumeResults(data.games ?? []);
+  }
+
+  function formatResumeState(game: JoinedGameSummary) {
+    if (game.status === "lobby") {
+      return "Lobby open";
+    }
+
+    if (game.status === "finished") {
+      return "Finished";
+    }
+
+    return `Day ${game.currentDay} of ${game.totalDays}`;
   }
 
   return (
@@ -185,62 +225,123 @@ export function HomeClient({
 
       <section id="create" className={styles.formSection}>
         <div className={styles.sectionHeading}>
-          <p className={styles.eyebrow}>Create A Game Instance</p>
-          <h2>Open the lobby, set the trip window, and get a public join link.</h2>
+          <p className={styles.eyebrow}>Create Or Resume</p>
+          <h2>Open a new lobby or pull up every game already tied to your Telegram handle.</h2>
         </div>
-        <form
-          className={styles.formCard}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleCreate(new FormData(event.currentTarget));
-          }}
-        >
-          <label>
-            Game title
-            <input name="title" placeholder={DEFAULT_GAME_TITLE} />
-          </label>
-          <label>
-            Groom name
-            <input name="groomName" placeholder={DEFAULT_GROOM_NAME} />
-          </label>
-          <label>
-            Host name
-            <input name="hostName" placeholder={DEFAULT_HOST_NAME} />
-          </label>
-          <label>
-            Host Telegram
-            <input name="telegramHandle" placeholder="@fede" required />
-          </label>
-          <div className={styles.dateRow}>
-            <label>
-              Start date
-              <input name="startDate" type="date" defaultValue={offsetDate(0)} required />
-            </label>
-            <label>
-              End date
-              <input name="endDate" type="date" defaultValue={offsetDate(3)} required />
-            </label>
+        <div className={styles.formGrid}>
+          <div className={`${styles.formCard} ${styles.resumeCard}`}>
+            <div className={styles.sectionHeading}>
+              <p className={styles.eyebrow}>Resume A Game</p>
+              <h3>See every lobby or run you already joined.</h3>
+            </div>
+            <p className={styles.summary}>
+              Enter the same Telegram handle you used when you joined. We&apos;ll list
+              every matching game so you can jump back in without hunting for the old
+              URL.
+            </p>
+            <form
+              className={styles.lookupForm}
+              onSubmit={(event) => {
+                event.preventDefault();
+                startLookupTransition(async () => {
+                  await handleResumeLookup(new FormData(event.currentTarget));
+                });
+              }}
+            >
+              <label>
+                Telegram handle
+                <input name="telegramHandle" placeholder="@luqui" required />
+              </label>
+              <button type="submit" disabled={isLookupPending}>
+                {isLookupPending ? "Looking up games..." : "Find my games"}
+              </button>
+            </form>
+            {resumeError ? <p className={styles.error}>{resumeError}</p> : null}
+            {resumeResults.length > 0 ? (
+              <div className={styles.resumeList}>
+                {resumeResults.map((game) => (
+                  <article key={`${game.gameId}:${game.playerId}`} className={styles.resumeItem}>
+                    <div className={styles.resumeMeta}>
+                      <strong>{game.title}</strong>
+                      <span>{formatResumeState(game)}</span>
+                      <span>{`${game.startDate} to ${game.endDate}`}</span>
+                      <span>{`You joined as ${game.playerName}`}</span>
+                      <span>{`Host: ${game.hostName}`}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.secondaryAction}
+                      onClick={() => {
+                        router.push(`/game/${game.gameId}?player=${game.playerId}`);
+                      }}
+                    >
+                      Resume play
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+            {searchedHandle && !resumeError && !isLookupPending && resumeResults.length === 0 ? (
+              <p className={styles.emptyState}>
+                No games found for {searchedHandle}. Join a game from an invite link first.
+              </p>
+            ) : null}
           </div>
-          <fieldset className={styles.tagFieldset}>
-            <legend>Quest spice level</legend>
-            <label className={styles.tagLabel}>
-              <input type="checkbox" name="tag_alcohol" defaultChecked />
-              Alcohol quests
+
+          <form
+            className={styles.formCard}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreate(new FormData(event.currentTarget));
+            }}
+          >
+            <label>
+              Game title
+              <input name="title" placeholder={DEFAULT_GAME_TITLE} />
             </label>
-            <label className={styles.tagLabel}>
-              <input type="checkbox" name="tag_locuras" defaultChecked />
-              Wild dares
+            <label>
+              Groom name
+              <input name="groomName" placeholder={DEFAULT_GROOM_NAME} />
             </label>
-            <label className={styles.tagLabel}>
-              <input type="checkbox" name="tag_vegas" />
-              Vegas rules (no-filter confessions)
+            <label>
+              Host name
+              <input name="hostName" placeholder={DEFAULT_HOST_NAME} />
             </label>
-          </fieldset>
-          {error ? <p className={styles.error}>{error}</p> : null}
-          <button type="submit" disabled={isPending}>
-            {isPending ? "Opening lobby..." : "Create Telegram-Ready Game"}
-          </button>
-        </form>
+            <label>
+              Host Telegram
+              <input name="telegramHandle" placeholder="@fede" required />
+            </label>
+            <div className={styles.dateRow}>
+              <label>
+                Start date
+                <input name="startDate" type="date" defaultValue={offsetDate(0)} required />
+              </label>
+              <label>
+                End date
+                <input name="endDate" type="date" defaultValue={offsetDate(3)} required />
+              </label>
+            </div>
+            <fieldset className={styles.tagFieldset}>
+              <legend>Quest spice level</legend>
+              <label className={styles.tagLabel}>
+                <input type="checkbox" name="tag_alcohol" defaultChecked />
+                Alcohol quests
+              </label>
+              <label className={styles.tagLabel}>
+                <input type="checkbox" name="tag_locuras" defaultChecked />
+                Wild dares
+              </label>
+              <label className={styles.tagLabel}>
+                <input type="checkbox" name="tag_vegas" />
+                Vegas rules (no-filter confessions)
+              </label>
+            </fieldset>
+            {createError ? <p className={styles.error}>{createError}</p> : null}
+            <button type="submit" disabled={isCreatePending}>
+              {isCreatePending ? "Opening lobby..." : "Create Telegram-Ready Game"}
+            </button>
+          </form>
+        </div>
       </section>
     </div>
   );

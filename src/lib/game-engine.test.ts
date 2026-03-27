@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resetGame, validateQuest } from "@/lib/game-engine";
+import { leaveGame, resetGame, validateQuest } from "@/lib/game-engine";
 import {
   buildStartedSimulatorGame,
   buildStartedTelegramGame,
@@ -78,6 +78,24 @@ describe("game validation flow", () => {
         note: "Self-approved",
       }),
     ).toThrow("cannot validate your own quest");
+  });
+
+  it("lets a non-host player leave and removes their active progress", () => {
+    const { game, mauri } = buildStartedTelegramGame();
+
+    const updatedGame = leaveGame(game, mauri.id);
+
+    expect(updatedGame.players.some((player) => player.id === mauri.id)).toBe(false);
+    expect(updatedGame.quests.some((quest) => quest.playerId === mauri.id)).toBe(false);
+    expect(updatedGame.messages.at(-1)?.title).toBe("Party member left");
+  });
+
+  it("blocks the host from leaving the game", () => {
+    const { game, host } = buildStartedTelegramGame();
+
+    expect(() => leaveGame(game, host.id)).toThrow(
+      "The host cannot leave the game. Delete the game instead.",
+    );
   });
 
   it("resets a game back to the lobby while keeping the roster", () => {

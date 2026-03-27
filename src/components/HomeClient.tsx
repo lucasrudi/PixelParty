@@ -29,11 +29,9 @@ const DEFAULT_HOST_NAME = "Fede";
 
 export function HomeClient({
   showSimulatorLink,
-  telegramBotUrl,
   telegramBotUsername,
 }: {
   showSimulatorLink: boolean;
-  telegramBotUrl?: string | null;
   telegramBotUsername?: string | null;
 }) {
   const router = useRouter();
@@ -140,16 +138,6 @@ export function HomeClient({
               <Link href="/simulator" className={styles.secondaryAction}>
                 Open Local Simulator
               </Link>
-            ) : null}
-            {telegramBotUrl ? (
-              <a
-                href={telegramBotUrl}
-                className={styles.secondaryAction}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open Telegram Bot
-              </a>
             ) : null}
           </div>
           <div className={styles.telegramNote}>

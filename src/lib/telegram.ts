@@ -26,7 +26,6 @@ export interface TelegramWebhookInfo {
   max_connections?: number;
   allowed_updates?: string[];
 }
-
 interface TelegramUser {
   id?: number;
   is_bot?: boolean;
@@ -201,7 +200,6 @@ async function callTelegramApi<TResponse>(
       `Telegram API ${method} failed with status ${response.status}: ${description}`,
     );
   }
-
   return data.result as TResponse;
 }
 

@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { UserFacingError } from "@/lib/errors";
 import {
   CreateGameInput,
   EVIDENCE_KINDS,
@@ -176,11 +177,11 @@ function assertDateRange(startDate: string, endDate: string) {
   const totalDays = diffDaysInclusive(startDate, endDate);
 
   if (!Number.isFinite(totalDays) || totalDays < 1) {
-    throw new Error("The end date must be on or after the start date.");
+    throw new UserFacingError("The end date must be on or after the start date.");
   }
 
   if (totalDays > 14) {
-    throw new Error("This MVP supports trips up to 14 days long.");
+    throw new UserFacingError("This MVP supports trips up to 14 days long.");
   }
 
   return totalDays;
@@ -299,23 +300,23 @@ export function assertCanManageGame(game: Game, playerId?: string) {
     return;
   }
 
-  throw new Error("Only the host can manage this game.");
+  throw new UserFacingError("Only the host can manage this game.");
 }
 
 export function createGame(input: CreateGameInput): Game {
   if (!input.hostName.trim()) {
-    throw new Error("The host needs a name.");
+    throw new UserFacingError("The host needs a name.");
   }
 
   if (!input.groomName.trim()) {
-    throw new Error("The groom name is required.");
+    throw new UserFacingError("The groom name is required.");
   }
 
   if (
     input.accessMode === "telegram" &&
     !hasTelegramIdentity(input)
   ) {
-    throw new Error("The host needs a Telegram User ID or Telegram login for the web game.");
+    throw new UserFacingError("The host needs a Telegram User ID or Telegram login for the web game.");
   }
 
   const totalDays = assertDateRange(input.startDate, input.endDate);
@@ -369,18 +370,18 @@ export function createGame(input: CreateGameInput): Game {
 
 export function joinGame(game: Game, input: JoinGameInput) {
   if (game.status !== "lobby") {
-    throw new Error("Players can only join while the game is still in the lobby.");
+    throw new UserFacingError("Players can only join while the game is still in the lobby.");
   }
 
   if (!input.name.trim()) {
-    throw new Error("The player name is required.");
+    throw new UserFacingError("The player name is required.");
   }
 
   if (
     game.accessMode === "telegram" &&
     !hasTelegramIdentity(input)
   ) {
-    throw new Error("A Telegram User ID or Telegram login is required for the web game.");
+    throw new UserFacingError("A Telegram User ID or Telegram login is required for the web game.");
   }
 
   const normalizedName = input.name.trim().toLowerCase();
@@ -388,21 +389,21 @@ export function joinGame(game: Game, input: JoinGameInput) {
   const sanitizedTelegramChatId = sanitizeTelegramChatId(input.telegramChatId);
 
   if (game.players.some((player) => player.name.toLowerCase() === normalizedName)) {
-    throw new Error("That player name is already in the party.");
+    throw new UserFacingError("That player name is already in the party.");
   }
 
   if (
     sanitizedTelegramUserId &&
     game.players.some((player) => player.telegramUserId === sanitizedTelegramUserId)
   ) {
-    throw new Error("That Telegram account is already linked to this party.");
+    throw new UserFacingError("That Telegram account is already linked to this party.");
   }
 
   if (
     sanitizedTelegramChatId &&
     game.players.some((player) => player.telegramChatId === sanitizedTelegramChatId)
   ) {
-    throw new Error("That Telegram chat is already linked to this party.");
+    throw new UserFacingError("That Telegram chat is already linked to this party.");
   }
 
   const player = createPlayer(
@@ -433,11 +434,11 @@ export function leaveGame(game: Game, playerId: string) {
   const player = game.players.find((entry) => entry.id === playerId);
 
   if (!player) {
-    throw new Error("Player not found.");
+    throw new UserFacingError("Player not found.");
   }
 
   if (player.id === game.hostPlayerId) {
-    throw new Error("The host cannot leave the game. Delete the game instead.");
+    throw new UserFacingError("The host cannot leave the game. Delete the game instead.");
   }
 
   game.players = game.players.filter((entry) => entry.id !== playerId);
@@ -459,11 +460,11 @@ export function leaveGame(game: Game, playerId: string) {
 
 export function startGame(game: Game) {
   if (game.status !== "lobby") {
-    throw new Error("Only lobby games can be started.");
+    throw new UserFacingError("Only lobby games can be started.");
   }
 
   if (game.players.length < 3) {
-    throw new Error("You need at least 3 players so two other people can validate each quest.");
+    throw new UserFacingError("You need at least 3 players so two other people can validate each quest.");
   }
 
   game.status = "active";
@@ -476,7 +477,7 @@ export function startGame(game: Game) {
 
 export function advanceDay(game: Game) {
   if (game.status !== "active") {
-    throw new Error("Only active games can advance.");
+    throw new UserFacingError("Only active games can advance.");
   }
 
   if (game.currentDay >= game.totalDays) {
@@ -555,17 +556,17 @@ export function submitActivity(
   input: SubmitActivityInput,
 ) {
   if (game.status !== "active") {
-    throw new Error("Activities can only be submitted while the game is active.");
+    throw new UserFacingError("Activities can only be submitted while the game is active.");
   }
 
   const player = game.players.find((entry) => entry.id === playerId);
 
   if (!player) {
-    throw new Error("Player not found.");
+    throw new UserFacingError("Player not found.");
   }
 
   if (!input.summary.trim()) {
-    throw new Error("Tell the narrator what you are doing first.");
+    throw new UserFacingError("Tell the narrator what you are doing first.");
   }
 
   const existing = player.activities.find(
@@ -609,33 +610,33 @@ export function submitEvidence(
   const quest = game.quests.find((entry) => entry.id === questId);
 
   if (!quest || quest.playerId !== playerId) {
-    throw new Error("Quest not found for this player.");
+    throw new UserFacingError("Quest not found for this player.");
   }
 
   if (quest.status === "completed") {
-    throw new Error("That quest has already been completed.");
+    throw new UserFacingError("That quest has already been completed.");
   }
 
   const description = input.description.trim();
 
   if (!description) {
-    throw new Error("Add a short description for the proof.");
+    throw new UserFacingError("Add a short description for the proof.");
   }
 
   if (description.length > MAX_EVIDENCE_DESCRIPTION_LENGTH) {
-    throw new Error(
+    throw new UserFacingError(
       `Evidence descriptions must be ${MAX_EVIDENCE_DESCRIPTION_LENGTH} characters or fewer.`,
     );
   }
 
   if (!isEvidenceKind(input.kind)) {
-    throw new Error(
+    throw new UserFacingError(
       `Evidence type must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
     );
   }
 
   if (!input.assetUrl.trim()) {
-    throw new Error("Evidence needs either an upload or a proof URL.");
+    throw new UserFacingError("Evidence needs either an upload or a proof URL.");
   }
 
   quest.evidence = {
@@ -685,25 +686,25 @@ export function validateQuest(
   const quest = game.quests.find((entry) => entry.id === questId);
 
   if (!quest) {
-    throw new Error("Quest not found.");
+    throw new UserFacingError("Quest not found.");
   }
 
   if (quest.status !== "pending_validation") {
-    throw new Error("That quest is no longer waiting for validation.");
+    throw new UserFacingError("That quest is no longer waiting for validation.");
   }
 
   if (quest.playerId === validatorId) {
-    throw new Error("You cannot validate your own quest.");
+    throw new UserFacingError("You cannot validate your own quest.");
   }
 
   if (!quest.validators.includes(validatorId)) {
-    throw new Error("You are not assigned to validate this quest.");
+    throw new UserFacingError("You are not assigned to validate this quest.");
   }
 
   if (
     quest.validationVotes.some((vote) => vote.playerId === validatorId)
   ) {
-    throw new Error("This validator already voted.");
+    throw new UserFacingError("This validator already voted.");
   }
 
   quest.validationVotes.push({

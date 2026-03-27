@@ -23,7 +23,13 @@ describe("JoinClient", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<JoinClient game={game} />);
+    render(
+      <JoinClient
+        game={game}
+        telegramAuth={null}
+        telegramLoginEnabled={false}
+      />,
+    );
 
     await user.type(screen.getByLabelText(/your name/i), "Luqui");
     await user.type(screen.getByLabelText(/telegram handle/i), "@luqui");
@@ -49,6 +55,50 @@ describe("JoinClient", () => {
         `/game/${game.id}?player=player_joined`,
       );
     });
+  });
+
+  it("uses the verified Telegram username when available", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ playerId: "player_joined" })),
+    );
+    const game = createGame({
+      title: "Weekend of Bad Decisions",
+      groomName: "Tincho",
+      hostName: "Fede",
+      telegramHandle: "@fede",
+      startDate: "2026-03-27",
+      endDate: "2026-03-30",
+      accessMode: "telegram",
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <JoinClient
+        game={game}
+        telegramAuth={{
+          authDate: 1_700_000_000,
+          id: "987654321",
+          name: "Luqui",
+          username: "luqui",
+          verifiedAt: "2026-03-27T10:00:00.000Z",
+        }}
+        telegramLoginEnabled
+      />,
+    );
+
+    await user.type(screen.getByLabelText(/your name/i), "Luqui");
+    await user.click(screen.getByRole("button", { name: /join the party/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    const [, request] = fetchMock.mock.calls[0] ?? [];
+    const payload = JSON.parse(String(request?.body ?? "{}")) as Record<string, string>;
+
+    expect(payload.telegramHandle).toBe("@luqui");
   });
 
   it("includes the Telegram WebApp chat id when available", async () => {
@@ -79,7 +129,13 @@ describe("JoinClient", () => {
       },
     });
 
-    render(<JoinClient game={game} />);
+    render(
+      <JoinClient
+        game={game}
+        telegramAuth={null}
+        telegramLoginEnabled={false}
+      />,
+    );
 
     await user.type(screen.getByLabelText(/your name/i), "Luqui");
     await user.type(screen.getByLabelText(/telegram handle/i), "@luqui");

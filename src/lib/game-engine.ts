@@ -72,9 +72,26 @@ export function normalizeTelegramHandle(value?: string) {
   return normalized ? `@${normalized}` : "";
 }
 
+function sanitizeTelegramUserId(value?: string) {
+  const normalized = value?.trim() ?? "";
+  return normalized || "";
+}
+
 function sanitizeTelegramChatId(value?: string) {
   const normalized = value?.trim() ?? "";
   return /^\d+$/.test(normalized) ? normalized : "";
+}
+
+function hasTelegramIdentity(input: {
+  telegramChatId?: string;
+  telegramHandle?: string;
+  telegramUserId?: string;
+}) {
+  return Boolean(
+    normalizeTelegramHandle(input.telegramHandle) ||
+      sanitizeTelegramUserId(input.telegramUserId) ||
+      sanitizeTelegramChatId(input.telegramChatId),
+  );
 }
 
 function buildTraits(): Record<PlayerTrait, number> {
@@ -120,14 +137,20 @@ function selectAvatar(usedAvatars: string[]) {
 function createPlayer(
   name: string,
   telegramHandle: string,
+  telegramUserId: string | undefined,
+  telegramVerifiedAt: string | undefined,
   telegramChatId: string,
   usedAvatars: string[],
   isHost: boolean,
 ): Player {
+  const sanitizedTelegramUserId = sanitizeTelegramUserId(telegramUserId);
+
   return {
     id: createId("player"),
     name: toTitleCase(name.trim()),
     telegramHandle: normalizeTelegramHandle(telegramHandle),
+    telegramUserId: sanitizedTelegramUserId || undefined,
+    telegramVerifiedAt,
     telegramBindingToken: createBindingToken(),
     telegramChatId: sanitizeTelegramChatId(telegramChatId) || undefined,
     joinedAt: now(),
@@ -287,15 +310,17 @@ export function createGame(input: CreateGameInput): Game {
 
   if (
     input.accessMode === "telegram" &&
-    !normalizeTelegramHandle(input.telegramHandle)
+    !hasTelegramIdentity(input)
   ) {
-    throw new Error("The host needs a Telegram handle for the web game.");
+    throw new Error("The host needs a Telegram login or handle for the web game.");
   }
 
   const totalDays = assertDateRange(input.startDate, input.endDate);
   const host = createPlayer(
     input.hostName,
     input.telegramHandle ?? "",
+    input.telegramUserId,
+    input.telegramVerifiedAt,
     input.telegramChatId ?? "",
     [],
     true,
@@ -350,20 +375,38 @@ export function joinGame(game: Game, input: JoinGameInput) {
 
   if (
     game.accessMode === "telegram" &&
-    !normalizeTelegramHandle(input.telegramHandle)
+    !hasTelegramIdentity(input)
   ) {
-    throw new Error("A Telegram handle is required for the web game.");
+    throw new Error("A Telegram login or handle is required for the web game.");
   }
 
   const normalizedName = input.name.trim().toLowerCase();
+  const sanitizedTelegramUserId = sanitizeTelegramUserId(input.telegramUserId);
+  const sanitizedTelegramChatId = sanitizeTelegramChatId(input.telegramChatId);
 
   if (game.players.some((player) => player.name.toLowerCase() === normalizedName)) {
     throw new Error("That player name is already in the party.");
   }
 
+  if (
+    sanitizedTelegramUserId &&
+    game.players.some((player) => player.telegramUserId === sanitizedTelegramUserId)
+  ) {
+    throw new Error("That Telegram account is already linked to this party.");
+  }
+
+  if (
+    sanitizedTelegramChatId &&
+    game.players.some((player) => player.telegramChatId === sanitizedTelegramChatId)
+  ) {
+    throw new Error("That Telegram chat is already linked to this party.");
+  }
+
   const player = createPlayer(
     input.name,
     input.telegramHandle ?? "",
+    input.telegramUserId,
+    input.telegramVerifiedAt,
     input.telegramChatId ?? "",
     game.players.map((member) => member.avatarKey),
     false,

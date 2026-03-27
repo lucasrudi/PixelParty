@@ -432,7 +432,9 @@ export function GameClient({
           <div className={styles.panelHeaderTitle}>
             <h2>{`${player.name}'s dashboard`}</h2>
             <span>
-              {player.telegramHandle || "Simulator identity"} · {player.points} pts
+              {player.telegramHandle ||
+                (player.telegramUserId ? "Telegram linked" : "Simulator identity")}{" "}
+              · {player.points} pts
             </span>
           </div>
           <button

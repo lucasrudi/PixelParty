@@ -6,7 +6,7 @@ Pixel-art multiplayer bachelor-party WebApp inspired by the original `tincho-en-
 
 - A lobby flow where one host creates a game instance, sets the trip start and end dates, and gets a public invite link
 - Join flow for friends using the public link
-- Telegram identity and bot-delivery flow using Telegram handles plus bot-linked chat IDs
+- Telegram identity and bot-delivery flow using Telegram website login, Telegram handles, and bot-linked chat IDs
 - A daily narrator loop that:
   - sends context for the current scene
   - asks each player what they are doing
@@ -23,17 +23,19 @@ Pixel-art multiplayer bachelor-party WebApp inspired by the original `tincho-en-
 This project now has a working Telegram binding and delivery layer for the main game flow.
 
 - stores Telegram handles for the main web flow
+- can verify a Telegram account from the website and remember that linked identity in the browser
 - captures a Telegram user/chat id automatically when the Web App is opened from Telegram
 - reads `TELEGRAM_BOT_TOKEN` on the server and can verify the configured bot through `/api/telegram/bot`
 - exposes the configured bot username publicly through `TELEGRAM_BOT_USERNAME` or `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`
 - accepts Telegram webhook updates through `/api/telegram/webhook`
 - lets players bind their Telegram account to an in-game identity using bot deep links
+- can pre-link a player from the website-first Telegram login flow before they ever tap the bot
 - sends a first Telegram DM after create or join when the Web App already provided the Telegram user id
 - delivers `telegram-ready` narrator and player-specific game messages to linked Telegram chats
 - answers `/today` in Telegram with the current quest
 - accepts a photo or video with a caption in Telegram as evidence for today's quest
 
-Players should still use their real Telegram handles consistently, and each player should start the bot once and complete the bind flow from the game dashboard before expecting Telegram delivery.
+Players should still use their real Telegram handles consistently. Telegram Login reduces the extra bind friction by proving which Telegram account belongs to the current browser session, and the bot/WebApp flow can still capture chat IDs directly when players come in through Telegram.
 
 ### Local Telegram setup
 
@@ -50,7 +52,8 @@ npm run dev
 3. Create a game from `/` using the normal Telegram form.
 4. Enter real-looking Telegram handles such as `@fede`, `@mauri`, and `@seba` when creating and joining players.
 5. Create a bot with BotFather.
-6. Set these environment variables:
+6. If you want the low-friction website login path too, enable **Bot Settings > Web Login** in BotFather and add your local origin or HTTPS tunnel to the allowed URLs.
+7. Set these environment variables:
 
 ```bash
 TELEGRAM_BOT_TOKEN=123456:abcde-your-token
@@ -62,11 +65,13 @@ APP_URL=https://your-public-tunnel.example.com
 PIXELPARTY_GAME_STORAGE=filesystem
 PIXELPARTY_UPLOAD_STORAGE=filesystem
 PIXELPARTY_ENABLE_SIMULATOR=true
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_ID=123456789
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_SECRET=telegram_web_login_secret
 PIXELPARTY_PUBLIC_URL=https://your-public-tunnel.example.com
 ```
 
-7. Expose your local app through an HTTPS tunnel such as `ngrok`, `Cloudflare Tunnel`, or similar.
-8. Register the Telegram webhook:
+8. Expose your local app through an HTTPS tunnel such as `ngrok`, `Cloudflare Tunnel`, or similar.
+9. Register the Telegram webhook:
 
 ```bash
 curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
@@ -74,8 +79,9 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
   -d "secret_token=$TELEGRAM_WEBHOOK_SECRET_TOKEN"
 ```
 
-9. Open the Web App from Telegram if you want create and join to trigger the first DM automatically.
-10. Ask each tester to send `/start` to the bot once so the chat can be linked even when they do not enter through the Web App.
+10. Open the Web App from Telegram if you want create and join to trigger the first DM automatically.
+11. Ask each tester to send `/start` to the bot once so the chat can be linked even when they do not enter through the Web App.
+12. If you enabled Telegram Login, testers can also use `Continue With Telegram` on `/` or `/join/...` to pre-link from the browser before switching over to the bot flow.
 
 Usage notes:
 
@@ -99,12 +105,14 @@ Use this when you want the normal web flow deployed for real players.
    - `TELEGRAM_BINDING_ENCRYPTION_KEY` to encrypt Telegram identifiers at rest
    - `TELEGRAM_WEBHOOK_SECRET_TOKEN` to authenticate Telegram webhook calls
    - `APP_URL` or `PIXELPARTY_PUBLIC_URL` so Telegram messages can link players back into the deployed app
+   - `PIXELPARTY_TELEGRAM_LOGIN_CLIENT_ID` and `PIXELPARTY_TELEGRAM_LOGIN_CLIENT_SECRET` if you want the website-first Telegram login path
 4. Register the Telegram webhook to point at `https://your-domain/api/telegram/webhook`.
 5. Keep the simulator disabled unless you explicitly want it:
    - `PIXELPARTY_ENABLE_SIMULATOR=false`
 6. Ask every player to start the bot once in Telegram.
 7. Require players to enter the same Telegram handle they use in Telegram when they join the non-simulator flow.
 8. Open the Web App from Telegram if you want create or join to trigger the first DM automatically.
+9. If Telegram Login is enabled, players can use the website `Continue With Telegram` buttons on `/` and `/join/...` to pre-link from the browser without sending them to the bot first.
 
 Example hosted configuration:
 
@@ -119,6 +127,8 @@ TELEGRAM_WEBHOOK_SECRET_TOKEN=replace-with-a-second-long-random-secret
 APP_URL=https://pixelparty.example.com
 PIXELPARTY_PUBLIC_URL=https://pixelparty.example.com
 PIXELPARTY_ENABLE_SIMULATOR=false
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_ID=123456789
+PIXELPARTY_TELEGRAM_LOGIN_CLIENT_SECRET=telegram_web_login_secret
 ```
 
 ## Run Locally

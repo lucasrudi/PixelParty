@@ -65,6 +65,8 @@ export interface Player {
   id: string;
   name: string;
   telegramHandle: string;
+  telegramUserId?: string;
+  telegramVerifiedAt?: string;
   telegramBindingToken?: string;
   telegramChatId?: string;
   joinedAt: string;
@@ -150,6 +152,8 @@ export interface CreateGameInput {
   endDate: string;
   hostName: string;
   telegramHandle?: string;
+  telegramUserId?: string;
+  telegramVerifiedAt?: string;
   telegramChatId?: string;
   accessMode: AccessMode;
   enabledTags?: QuestTagToggle[];
@@ -158,6 +162,8 @@ export interface CreateGameInput {
 export interface JoinGameInput {
   name: string;
   telegramHandle?: string;
+  telegramUserId?: string;
+  telegramVerifiedAt?: string;
   telegramChatId?: string;
 }
 

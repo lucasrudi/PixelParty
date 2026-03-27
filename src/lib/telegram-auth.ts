@@ -168,6 +168,10 @@ function buildCookieSecret(env: Environment = process.env) {
   );
 }
 
+function shouldUseSecureCookies(env: Environment = process.env) {
+  return env.INSECURE_COOKIES !== "true";
+}
+
 async function fetchTelegramJwks() {
   const now = Date.now();
 
@@ -318,33 +322,33 @@ export function createTelegramSessionCookie(
   return encodeSignedJson(session, secret);
 }
 
-export function clearTelegramCookieOptions() {
+export function clearTelegramCookieOptions(env: Environment = process.env) {
   return {
     httpOnly: true,
     maxAge: 0,
     path: "/",
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(env),
   };
 }
 
-export function getTelegramSessionCookieOptions() {
+export function getTelegramSessionCookieOptions(env: Environment = process.env) {
   return {
     httpOnly: true,
     maxAge: 60 * 60 * 24 * 30,
     path: "/",
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(env),
   };
 }
 
-export function getTelegramOauthCookieOptions() {
+export function getTelegramOauthCookieOptions(env: Environment = process.env) {
   return {
     httpOnly: true,
     maxAge: 60 * 10,
     path: "/",
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(env),
   };
 }
 

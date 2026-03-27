@@ -1,8 +1,12 @@
+import { randomBytes } from "crypto";
 import {
   CreateGameInput,
+  EVIDENCE_KINDS,
   Game,
   GameMessage,
+  isEvidenceKind,
   JoinGameInput,
+  MAX_EVIDENCE_DESCRIPTION_LENGTH,
   Player,
   PlayerTrait,
   Quest,
@@ -43,16 +47,16 @@ const ROLE_TITLES = [
   "Backup Menace",
 ];
 
+const INVITE_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
 function createId(prefix: string) {
   return `${prefix}_${crypto.randomUUID().slice(0, 8)}`;
 }
 
 function createInviteCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
-
-function createBindingToken() {
-  return crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+  return Array.from(randomBytes(6), (byte) =>
+    INVITE_CODE_ALPHABET[byte % INVITE_CODE_ALPHABET.length],
+  ).join("");
 }
 
 function now() {
@@ -612,8 +616,22 @@ export function submitEvidence(
     throw new Error("That quest has already been completed.");
   }
 
-  if (!input.description.trim()) {
+  const description = input.description.trim();
+
+  if (!description) {
     throw new Error("Add a short description for the proof.");
+  }
+
+  if (description.length > MAX_EVIDENCE_DESCRIPTION_LENGTH) {
+    throw new Error(
+      `Evidence descriptions must be ${MAX_EVIDENCE_DESCRIPTION_LENGTH} characters or fewer.`,
+    );
+  }
+
+  if (!isEvidenceKind(input.kind)) {
+    throw new Error(
+      `Evidence type must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
+    );
   }
 
   if (!input.assetUrl.trim()) {
@@ -622,7 +640,7 @@ export function submitEvidence(
 
   quest.evidence = {
     kind: input.kind,
-    description: input.description.trim(),
+    description,
     assetUrl: input.assetUrl.trim(),
     fileName: input.fileName,
     submittedAt: now(),

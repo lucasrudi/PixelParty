@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  assertEvidenceRequestSize,
+  parseEvidenceRequest,
+} from "@/lib/evidence-request";
 import { submitEvidence } from "@/lib/game-engine";
 import { UserFacingError } from "@/lib/errors";
 import { jsonError } from "@/lib/route-response";
@@ -10,11 +14,6 @@ import {
   getTelegramSession,
   TELEGRAM_AUTH_COOKIE_NAME,
 } from "@/lib/telegram-auth";
-import {
-  EVIDENCE_KINDS,
-  isEvidenceKind,
-  MAX_EVIDENCE_DESCRIPTION_LENGTH,
-} from "@/lib/types";
 import { saveBrowserFile } from "@/lib/uploads";
 
 export async function POST(
@@ -23,33 +22,18 @@ export async function POST(
 ) {
   try {
     const { gameId, questId } = await context.params;
+    assertEvidenceRequestSize(request);
     const formData = await request.formData();
-    const bodyPlayerId = String(formData.get("playerId") ?? "");
-    const description = String(formData.get("description") ?? "").trim();
-    const kind = String(formData.get("kind") ?? "photo");
-    const proofUrl = String(formData.get("proofUrl") ?? "");
-    const file = formData.get("file");
+    const body = parseEvidenceRequest(formData);
     const telegramSession = getTelegramSession(
       getCookieValue(request.headers.get("cookie"), TELEGRAM_AUTH_COOKIE_NAME),
     );
 
-    if (!isEvidenceKind(kind)) {
-      throw new UserFacingError(
-        `Evidence type must be one of: ${EVIDENCE_KINDS.join(", ")}.`,
-      );
-    }
-
-    if (description.length > MAX_EVIDENCE_DESCRIPTION_LENGTH) {
-      throw new UserFacingError(
-        `Evidence descriptions must be ${MAX_EVIDENCE_DESCRIPTION_LENGTH} characters or fewer.`,
-      );
-    }
-
-    let assetUrl = proofUrl.trim();
+    let assetUrl = body.proofUrl;
     let fileName: string | undefined;
 
-    if (file instanceof File && file.size > 0) {
-      const saved = await saveBrowserFile(file);
+    if (body.file) {
+      const saved = await saveBrowserFile(body.file);
       assetUrl = saved.assetUrl;
       fileName = saved.fileName;
     }
@@ -57,9 +41,13 @@ export async function POST(
     const game = await updateGame(gameId, (current) => {
       if (current.accessMode === "simulator") {
         assertSimulatorEnabled();
-        return submitEvidence(current, bodyPlayerId, questId, {
-          description,
-          kind: kind === "video" ? "video" : "photo",
+        if (!body.playerId) {
+          throw new UserFacingError("A simulator player id is required to submit evidence.");
+        }
+
+        return submitEvidence(current, body.playerId, questId, {
+          description: body.description,
+          kind: body.kind,
           assetUrl,
           fileName,
         });
@@ -73,8 +61,8 @@ export async function POST(
       }
 
       return submitEvidence(current, sessionPlayer.id, questId, {
-        description,
-        kind,
+        description: body.description,
+        kind: body.kind,
         assetUrl,
         fileName,
       });

@@ -33,7 +33,20 @@ describe("games route telegram logging", () => {
           },
         ),
       );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const logWrites: string[] = [];
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(
+      ((chunk, encoding, callback) => {
+        logWrites.push(typeof chunk === "string" ? chunk : chunk.toString());
+
+        if (typeof encoding === "function") {
+          encoding();
+        } else {
+          callback?.();
+        }
+
+        return true;
+      }) as typeof process.stdout.write,
+    );
 
     vi.stubGlobal("fetch", fetchMock);
     vi.resetModules();
@@ -66,13 +79,12 @@ describe("games route telegram logging", () => {
     expect(payload.gameId).toBeTruthy();
     expect(payload.hostPlayerId).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledWith(
-      "[telegram.lobby-link]",
-      expect.objectContaining({
-        event: "created",
-        gameId: payload.gameId,
-        message: expect.stringContaining("Telegram API sendMessage failed with status 403"),
-      }),
+    expect(stdoutSpy).toHaveBeenCalled();
+    expect(logWrites.join("")).toContain('"context":"telegram.lobby-link"');
+    expect(logWrites.join("")).toContain('"event":"created"');
+    expect(logWrites.join("")).toContain(`"gameId":"${payload.gameId}"`);
+    expect(logWrites.join("")).toContain(
+      "\"message\":\"Telegram API sendMessage failed with status 403",
     );
   });
 });

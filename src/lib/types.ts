@@ -22,6 +22,9 @@ export type EvidenceKind = "photo" | "video";
 
 export const EVIDENCE_KINDS = ["photo", "video"] as const;
 export const MAX_EVIDENCE_DESCRIPTION_LENGTH = 500;
+export const MAX_EVIDENCE_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
+export const MAX_EVIDENCE_REQUEST_SIZE_BYTES = 10 * 1024 * 1024;
+export const MAX_EVIDENCE_URL_LENGTH = 2048;
 
 export function isEvidenceKind(value: string): value is EvidenceKind {
   return EVIDENCE_KINDS.includes(value as EvidenceKind);
